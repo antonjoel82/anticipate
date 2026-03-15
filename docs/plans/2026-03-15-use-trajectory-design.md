@@ -310,19 +310,29 @@ const adjustedWindow = acceleration < 0
   : predictionWindow
 ```
 
-### Confidence Scoring
+### Confidence Scoring (Temporal Stability)
 
-Combines speed and trajectory straightness into a 0-1 confidence value:
+Confidence measures how many consecutive frames a given element has been the predicted target. This approach is grounded in prior art (Premonish by Conlen, 2016) and avoids the speed paradox where users slow down near targets (Fitts's Law), which would incorrectly lower a speed-based confidence score.
 
 ```typescript
-// Angular variance of recent velocity vectors
-// Low variance = straight line = high confidence
-// High variance = curved/erratic = low confidence
-const angularVariance = computeAngularVariance(recentAngles)
-const speed = Math.hypot(smoothedVx, smoothedVy)
+// Per-element: track consecutive frames where isIntersecting === true
+if (isIntersecting) {
+  elementState.consecutiveHitFrames++
+} else {
+  elementState.consecutiveHitFrames = 0
+}
 
-const confidence = Math.min(1, speed / CONFIDENCE_SPEED_NORMALIZER) * (1 - Math.min(1, angularVariance))
+// Confidence saturates at CONFIDENCE_SATURATION_FRAMES (default 10)
+const confidence = Math.min(1, elementState.consecutiveHitFrames / CONFIDENCE_SATURATION_FRAMES)
 ```
+
+Properties:
+- 0.0 = trajectory just started intersecting (1 frame)
+- 0.5 = intersecting for 5 consecutive frames (~83ms at 60fps)
+- 1.0 = intersecting for 10+ consecutive frames (~167ms at 60fps)
+- Resets to 0 immediately when trajectory stops intersecting
+
+This maps directly to UX intent: a trajectory that *stays* pointed at an element across multiple frames is a stronger signal than a momentary intersection.
 
 Exposed in every snapshot. Consumers threshold it in `triggerOn`.
 
@@ -446,9 +456,9 @@ export const MAX_TOLERANCE = 2000
 export const DECELERATION_WINDOW_FLOOR = 0.3
 export const DECELERATION_DAMPENING = 0.5
 
-// Confidence
-export const CONFIDENCE_SPEED_NORMALIZER = 500
-export const MIN_VELOCITY_THRESHOLD = 5
+// Confidence (temporal stability)
+export const CONFIDENCE_SATURATION_FRAMES = 10   // Frames to reach confidence=1.0
+export const MIN_VELOCITY_THRESHOLD = 5           // px/s below which cursor is "stopped"
 
 // Cooldown
 export const DEFAULT_COOLDOWN_INTERVAL_MS = 300
