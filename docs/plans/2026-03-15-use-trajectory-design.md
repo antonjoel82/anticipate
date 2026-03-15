@@ -128,6 +128,7 @@ function useTrajectory(options?: EngineOptions): {
     id: string,
     config: ElementConfig
   ) => RefCallback<T>
+  trigger: (id: string, options?: TriggerOptions) => void        // Imperatively fire callback
   getSnapshot: (id: string) => TrajectorySnapshot | undefined   // Non-reactive read
   useSnapshot: (id: string) => TrajectorySnapshot | undefined   // Per-element reactive subscription
 }
@@ -192,6 +193,7 @@ class TrajectoryEngine {
   constructor(options?: EngineOptions)                              // Validated at boundary
   register(id: string, el: HTMLElement, config: ElementConfig): void // Re-register updates config
   unregister(id: string): void
+  trigger(id: string, options?: TriggerOptions): void              // Imperatively fire callback
   getSnapshot(id: string): TrajectorySnapshot | undefined
   getAllSnapshots(): ReadonlyMap<string, TrajectorySnapshot>
   subscribe(callback: () => void): () => void                      // Global subscription
@@ -203,6 +205,17 @@ class TrajectoryEngine {
 ```
 
 Calling `register()` with an existing ID **updates the config** for that element (does not create a duplicate). This is how the React hook handles config changes without stale closures.
+
+### Imperative Trigger
+
+```typescript
+type TriggerOptions = { dangerouslyIgnoreProfile?: boolean }
+
+engine.trigger('btn')                                    // Respects profile (once won't re-fire, cooldown checks interval)
+engine.trigger('btn', { dangerouslyIgnoreProfile: true }) // Always fires, ignoring profile state
+```
+
+Use cases: programmatic prefetch, keyboard navigation, testing, mobile fallback. Calls `whenTriggered()` directly — skips `triggerOn` predicate evaluation. Does NOT fabricate snapshot data.
 
 ## Type System
 

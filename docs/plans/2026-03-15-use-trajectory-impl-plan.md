@@ -887,6 +887,45 @@ describe('TrajectoryEngine', () => {
     })
   })
 
+  describe('imperative trigger', () => {
+    it('fires whenTriggered callback', () => {
+      const engine = new TrajectoryEngine()
+      const el = document.createElement('div')
+      const cb = vi.fn()
+      engine.register('test', el, { triggerOn: () => ({ isTriggered: false }), whenTriggered: cb, profile: { type: 'on_enter' } })
+
+      engine.trigger('test')
+      expect(cb).toHaveBeenCalledOnce()
+    })
+
+    it('respects once profile — does not re-fire', () => {
+      const engine = new TrajectoryEngine()
+      const el = document.createElement('div')
+      const cb = vi.fn()
+      engine.register('test', el, { triggerOn: () => ({ isTriggered: false }), whenTriggered: cb, profile: { type: 'once' } })
+
+      engine.trigger('test')
+      engine.trigger('test')
+      expect(cb).toHaveBeenCalledOnce()
+    })
+
+    it('dangerouslyIgnoreProfile bypasses once', () => {
+      const engine = new TrajectoryEngine()
+      const el = document.createElement('div')
+      const cb = vi.fn()
+      engine.register('test', el, { triggerOn: () => ({ isTriggered: false }), whenTriggered: cb, profile: { type: 'once' } })
+
+      engine.trigger('test')
+      engine.trigger('test', { dangerouslyIgnoreProfile: true })
+      expect(cb).toHaveBeenCalledTimes(2)
+    })
+
+    it('throws on unknown element id', () => {
+      const engine = new TrajectoryEngine()
+      expect(() => engine.trigger('nonexistent')).toThrow()
+    })
+  })
+
   describe('connect/disconnect', () => {
     it('connect adds event listener', () => {
       const engine = new TrajectoryEngine()
