@@ -96,3 +96,58 @@ describe('ForeseeProfiler', () => {
     profiler.destroy()
   })
 })
+
+describe('subscribable snapshot', () => {
+  let engine: TrajectoryEngine
+
+  beforeEach(() => {
+    sessionStorage.clear()
+    engine = new TrajectoryEngine()
+  })
+
+  it('subscribe returns unsubscribe function', () => {
+    const profiler = new ForeseeProfiler(engine)
+    const listener = vi.fn()
+    const unsub = profiler.subscribe(listener)
+    expect(typeof unsub).toBe('function')
+    unsub()
+    profiler.destroy()
+  })
+
+  it('getSnapshot returns stable shape', () => {
+    const profiler = new ForeseeProfiler(engine)
+    const snap = profiler.getSnapshot()
+    expect(snap).toHaveProperty('report')
+    expect(snap).toHaveProperty('events')
+    expect(snap).toHaveProperty('enabled')
+    expect(snap.enabled).toBe(true)
+    profiler.destroy()
+  })
+
+  it('notifies subscribers on new prediction event', () => {
+    const profiler = new ForeseeProfiler(engine)
+    const el = document.createElement('div')
+    vi.spyOn(el, 'getBoundingClientRect').mockReturnValue({
+      left: 100, top: 100, right: 200, bottom: 200,
+      width: 100, height: 100, x: 100, y: 100, toJSON: () => {},
+    })
+    engine.register('btn', el, {
+      triggerOn: () => ({ isTriggered: false }),
+      whenTriggered: () => {},
+      profile: { type: 'on_enter' },
+    })
+
+    const listener = vi.fn()
+    profiler.subscribe(listener)
+    engine.trigger('btn')
+    expect(listener).toHaveBeenCalled()
+    profiler.destroy()
+  })
+
+  it('setEnabled(false) stops recording events', () => {
+    const profiler = new ForeseeProfiler(engine)
+    profiler.setEnabled(false)
+    expect(profiler.getSnapshot().enabled).toBe(false)
+    profiler.destroy()
+  })
+})

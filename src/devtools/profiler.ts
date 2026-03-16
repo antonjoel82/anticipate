@@ -4,8 +4,15 @@ import type {
   ProfilerReport,
   FlowReport,
   PredictionRecord,
+  PredictionFiredEvent,
   ConfirmationRecord,
 } from './types.js'
+
+export type ProfilerSnapshot = {
+  report: ProfilerReport
+  events: readonly PredictionFiredEvent[]
+  enabled: boolean
+}
 import { DEFAULT_CONFIRMATION_WINDOW_MS, DEFAULT_MAX_EVENTS_STORED } from './constants.js'
 import { SessionStore } from './session-store.js'
 import { ClickCorrelator } from './correlation.js'
@@ -18,6 +25,10 @@ export class ForeseeProfiler {
   private readonly confirmationWindowMs: number
   private readonly persistAcrossNavigations: boolean
   private readonly unsubscribers: Array<() => void> = []
+  private readonly uiSubscribers = new Set<() => void>()
+  private readonly recentEvents: PredictionFiredEvent[] = []
+  private snapshotCache: ProfilerSnapshot | null = null
+  private isEnabled = true
   private isDestroyed = false
 
   constructor(engine: TrajectoryEngine, options?: ProfilerOptions) {
@@ -64,8 +75,33 @@ export class ForeseeProfiler {
     })
   }
 
+  subscribe(listener: () => void): () => void {
+    this.uiSubscribers.add(listener)
+    return () => {
+      this.uiSubscribers.delete(listener)
+    }
+  }
+
+  getSnapshot(): ProfilerSnapshot {
+    if (!this.snapshotCache) {
+      this.snapshotCache = {
+        report: this.getReport(),
+        events: [...this.recentEvents],
+        enabled: this.isEnabled,
+      }
+    }
+    return this.snapshotCache
+  }
+
+  setEnabled(enabled: boolean): void {
+    this.isEnabled = enabled
+    this.invalidateSnapshot()
+  }
+
   reset(): void {
     this.store.clear()
+    this.recentEvents.length = 0
+    this.invalidateSnapshot()
   }
 
   destroy(): void {
@@ -82,6 +118,8 @@ export class ForeseeProfiler {
 
   private attachEngineListeners(): void {
     const unsubFired = this.engine.onDev('prediction:fired', (event) => {
+      if (!this.isEnabled) return
+
       const record: PredictionRecord = {
         elementId: event.elementId,
         timestamp: event.timestamp,
@@ -90,9 +128,13 @@ export class ForeseeProfiler {
       }
       this.store.addPrediction(record)
       this.clickCorrelator.recordPrediction(record)
+      this.recentEvents.push(event)
+      this.invalidateSnapshot()
     })
 
     const unsubEnd = this.engine.onDev('prediction:callback-end', (event) => {
+      if (!this.isEnabled) return
+
       const state = this.store.getState()
       const pred = state.pendingPredictions.find(
         (p) => p.elementId === event.elementId
@@ -110,6 +152,18 @@ export class ForeseeProfiler {
     this.store.addConfirmation(record)
     if (this.persistAcrossNavigations) {
       this.store.flush()
+    }
+    this.invalidateSnapshot()
+  }
+
+  private invalidateSnapshot(): void {
+    this.snapshotCache = null
+    this.notifyUiSubscribers()
+  }
+
+  private notifyUiSubscribers(): void {
+    for (const listener of this.uiSubscribers) {
+      try { listener() } catch { }
     }
   }
 }
