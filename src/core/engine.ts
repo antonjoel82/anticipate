@@ -26,6 +26,8 @@ import {
   CONFIDENCE_SATURATION_FRAMES,
   DEFAULT_CONFIDENCE_THRESHOLD,
 } from './constants.js'
+import { DevEventEmitter } from '../devtools/events.js'
+import type { ForeseeDevEventMap } from '../devtools/types.js'
 
 type RegisteredElement = {
   element: HTMLElement
@@ -40,6 +42,8 @@ export class TrajectoryEngine {
   private readonly snapshots = new Map<string, TrajectorySnapshot>()
   private readonly globalSubscribers = new Set<() => void>()
   private readonly elementSubscribers = new Map<string, Set<() => void>>()
+  private readonly devEmitter = new DevEventEmitter()
+  private readonly elementToId = new WeakMap<HTMLElement, string>()
 
   private predictionState: PredictionState
   private readonly defaultTolerance: ToleranceRect
@@ -91,16 +95,22 @@ export class TrajectoryEngine {
     const existing: RegisteredElement | undefined = this.elements.get(id)
     if (existing) {
       const hasElementChanged: boolean = existing.element !== element
-      if (hasElementChanged && this.resizeObserver) {
-        this.resizeObserver.unobserve(existing.element)
-        this.resizeObserver.observe(element)
+      if (hasElementChanged) {
+        this.elementToId.delete(existing.element)
+        if (this.resizeObserver) {
+          this.resizeObserver.unobserve(existing.element)
+          this.resizeObserver.observe(element)
+        }
       }
+      this.elementToId.set(element, id)
       existing.element = element
       existing.config = resolvedConfig
       existing.normalizedTolerance = tolerance
       this.refreshRect(existing)
       return
     }
+
+    this.elementToId.set(element, id)
 
     const registered: RegisteredElement = {
       element,
@@ -122,6 +132,8 @@ export class TrajectoryEngine {
     const registered: RegisteredElement | undefined = this.elements.get(id)
     if (!registered) return
 
+    this.elementToId.delete(registered.element)
+
     if (this.resizeObserver) {
       this.resizeObserver.unobserve(registered.element)
     }
@@ -141,15 +153,38 @@ export class TrajectoryEngine {
     const isIgnoringProfile: boolean = options?.dangerouslyIgnoreProfile === true
 
     if (isIgnoringProfile) {
-      this.safeFireCallback(registered.config.whenTriggered)
+      this.emitDevEventsAndFire(id, registered)
       return
     }
 
     const canFire: boolean = shouldFire(registered.config.profile, registered.state, true, performance.now())
     if (canFire) {
-      this.safeFireCallback(registered.config.whenTriggered)
+      this.emitDevEventsAndFire(id, registered)
       updateElementState(registered.state, true, performance.now(), true)
     }
+  }
+
+  onDev<K extends keyof ForeseeDevEventMap>(
+    event: K,
+    listener: (data: ForeseeDevEventMap[K]) => void,
+  ): () => void {
+    return this.devEmitter.on(event, listener)
+  }
+
+  resolveIdFromEventTarget(target: EventTarget | null): string | null {
+    if (!target || !(target instanceof HTMLElement)) return null
+
+    let current: HTMLElement | null = target
+    while (current) {
+      const id = this.elementToId.get(current)
+      if (id !== undefined) return id
+      current = current.parentElement
+    }
+    return null
+  }
+
+  getElementById(id: string): HTMLElement | null {
+    return this.elements.get(id)?.element ?? null
   }
 
   getSnapshot(id: string): TrajectorySnapshot | undefined {
@@ -241,6 +276,7 @@ export class TrajectoryEngine {
     this.snapshots.clear()
     this.globalSubscribers.clear()
     this.elementSubscribers.clear()
+    this.devEmitter.removeAll()
     this.isDestroyed = true
   }
 
@@ -353,7 +389,7 @@ export class TrajectoryEngine {
       const canFire: boolean = shouldFire(registered.config.profile, registered.state, triggerResult.isTriggered, now)
 
       if (canFire) {
-        this.safeFireCallback(registered.config.whenTriggered)
+        this.emitDevEventsAndFire(id, registered)
       }
 
       updateElementState(registered.state, triggerResult.isTriggered, now, canFire)
@@ -366,12 +402,47 @@ export class TrajectoryEngine {
     }
   }
 
+  private emitDevEventsAndFire(elementId: string, registered: RegisteredElement): void {
+    const hasDevListeners = this.devEmitter.hasListeners()
+
+    if (hasDevListeners) {
+      const snapshot = this.snapshots.get(elementId)
+      this.devEmitter.emit('prediction:fired', {
+        elementId,
+        timestamp: performance.now(),
+        confidence: snapshot?.confidence ?? 0,
+        predictedPoint: snapshot?.predictedPoint ?? { x: 0, y: 0 },
+      })
+      this.devEmitter.emit('prediction:callback-start', {
+        elementId,
+        timestamp: performance.now(),
+      })
+    }
+
+    const startTime = hasDevListeners ? performance.now() : 0
+    let status: 'success' | 'error' = 'success'
+    try {
+      Promise.resolve(registered.config.whenTriggered()).catch(() => {
+        status = 'error'
+      })
+    } catch {
+      status = 'error'
+    }
+
+    if (hasDevListeners) {
+      this.devEmitter.emit('prediction:callback-end', {
+        elementId,
+        timestamp: performance.now(),
+        durationMs: performance.now() - startTime,
+        status,
+      })
+    }
+  }
+
   private safeFireCallback(callback: () => void | Promise<void>): void {
     try {
       Promise.resolve(callback()).catch(() => {})
-    } catch {
-      // Error-isolated: callbacks never crash the engine
-    }
+    } catch { }
   }
 
   private notifyGlobalSubscribers(): void {

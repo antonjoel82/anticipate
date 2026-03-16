@@ -201,3 +201,141 @@ describe('TrajectoryEngine convenience config', () => {
     engine.destroy()
   })
 })
+
+function mockRect(el: HTMLElement): void {
+  vi.spyOn(el, 'getBoundingClientRect').mockReturnValue({
+    left: 0, top: 0, right: 100, bottom: 100,
+    width: 100, height: 100, x: 0, y: 0, toJSON: () => {},
+  })
+}
+
+describe('resolveIdFromEventTarget', () => {
+  it('resolves a registered element', () => {
+    const engine = new TrajectoryEngine()
+    const el = document.createElement('div')
+    mockRect(el)
+    engine.register('btn', el, makeConfig())
+    expect(engine.resolveIdFromEventTarget(el)).toBe('btn')
+  })
+
+  it('resolves a child element inside a registered element', () => {
+    const engine = new TrajectoryEngine()
+    const parent = document.createElement('div')
+    const child = document.createElement('span')
+    parent.appendChild(child)
+    mockRect(parent)
+    engine.register('link', parent, makeConfig())
+    expect(engine.resolveIdFromEventTarget(child)).toBe('link')
+  })
+
+  it('returns null for unregistered elements', () => {
+    const engine = new TrajectoryEngine()
+    const el = document.createElement('div')
+    expect(engine.resolveIdFromEventTarget(el)).toBeNull()
+  })
+
+  it('returns null for null target', () => {
+    const engine = new TrajectoryEngine()
+    expect(engine.resolveIdFromEventTarget(null)).toBeNull()
+  })
+
+  it('updates mapping when element is re-registered', () => {
+    const engine = new TrajectoryEngine()
+    const el1 = document.createElement('div')
+    const el2 = document.createElement('div')
+    mockRect(el1)
+    mockRect(el2)
+    engine.register('btn', el1, makeConfig())
+    engine.register('btn', el2, makeConfig())
+    expect(engine.resolveIdFromEventTarget(el2)).toBe('btn')
+    expect(engine.resolveIdFromEventTarget(el1)).toBeNull()
+  })
+
+  it('clears mapping on unregister', () => {
+    const engine = new TrajectoryEngine()
+    const el = document.createElement('div')
+    mockRect(el)
+    engine.register('btn', el, makeConfig())
+    engine.unregister('btn')
+    expect(engine.resolveIdFromEventTarget(el)).toBeNull()
+  })
+})
+
+describe('getElementById', () => {
+  it('returns registered element', () => {
+    const engine = new TrajectoryEngine()
+    const el = document.createElement('div')
+    mockRect(el)
+    engine.register('btn', el, makeConfig())
+    expect(engine.getElementById('btn')).toBe(el)
+  })
+
+  it('returns null for unregistered id', () => {
+    const engine = new TrajectoryEngine()
+    expect(engine.getElementById('nonexistent')).toBeNull()
+  })
+})
+
+describe('dev events', () => {
+  it('onDev subscribes to dev events', () => {
+    const engine = new TrajectoryEngine()
+    const listener = vi.fn()
+    const unsub = engine.onDev('prediction:fired', listener)
+    expect(typeof unsub).toBe('function')
+    unsub()
+  })
+
+  it('emits prediction:fired when callback fires via trigger()', () => {
+    const engine = new TrajectoryEngine()
+    const el = document.createElement('div')
+    vi.spyOn(el, 'getBoundingClientRect').mockReturnValue({
+      left: 100, top: 100, right: 200, bottom: 200,
+      width: 100, height: 100, x: 100, y: 100, toJSON: () => {},
+    })
+
+    const whenTriggered = vi.fn()
+    engine.register('btn', el, {
+      triggerOn: () => ({ isTriggered: false }),
+      whenTriggered,
+      profile: { type: 'on_enter' },
+    })
+
+    const firedListener = vi.fn()
+    const callbackStartListener = vi.fn()
+    const callbackEndListener = vi.fn()
+    engine.onDev('prediction:fired', firedListener)
+    engine.onDev('prediction:callback-start', callbackStartListener)
+    engine.onDev('prediction:callback-end', callbackEndListener)
+
+    engine.trigger('btn')
+
+    expect(firedListener).toHaveBeenCalledOnce()
+    expect(firedListener).toHaveBeenCalledWith(
+      expect.objectContaining({ elementId: 'btn' })
+    )
+    expect(callbackStartListener).toHaveBeenCalledOnce()
+    expect(callbackEndListener).toHaveBeenCalledOnce()
+    expect(callbackEndListener).toHaveBeenCalledWith(
+      expect.objectContaining({ elementId: 'btn', status: 'success' })
+    )
+  })
+
+  it('does not emit events when no listeners attached', () => {
+    const engine = new TrajectoryEngine()
+    const el = document.createElement('div')
+    vi.spyOn(el, 'getBoundingClientRect').mockReturnValue({
+      left: 100, top: 100, right: 200, bottom: 200,
+      width: 100, height: 100, x: 100, y: 100, toJSON: () => {},
+    })
+
+    const whenTriggered = vi.fn()
+    engine.register('btn', el, {
+      triggerOn: () => ({ isTriggered: false }),
+      whenTriggered,
+      profile: { type: 'on_enter' },
+    })
+
+    expect(() => engine.trigger('btn')).not.toThrow()
+    expect(whenTriggered).toHaveBeenCalledOnce()
+  })
+})
