@@ -24,6 +24,11 @@
       "types": "./dist/devtools.d.ts",
       "import": "./dist/devtools.mjs",
       "require": "./dist/devtools.js"
+    },
+    "./devtools/react": {
+      "types": "./dist/devtools-react.d.ts",
+      "import": "./dist/devtools-react.mjs",
+      "require": "./dist/devtools-react.js"
     }
   },
   "scripts": {
