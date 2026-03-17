@@ -1,4 +1,4 @@
-import type { TrajectorySnapshot } from 'anticipated/core'
+import type { TrajectorySnapshot } from 'anticipate/core'
 import type { CSSProperties } from 'react'
 
 type ConfidenceBadgeProps = {

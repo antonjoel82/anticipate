@@ -4,8 +4,8 @@
     "baseUrl": ".",
     "noEmit": true,
     "paths": {
-      "anticipated/react": ["../src/react/index.ts"],
-      "anticipated/core": ["../src/core/index.ts"]
+      "anticipate/react": ["../src/react/index.ts"],
+      "anticipate/core": ["../src/core/index.ts"]
     }
   },
   "include": ["."]

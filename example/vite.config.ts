@@ -7,8 +7,8 @@ export default defineConfig({
   root: path.resolve(__dirname),
   resolve: {
     alias: {
-      'anticipated/react': path.resolve(__dirname, '../src/react/index.ts'),
-      'anticipated/core': path.resolve(__dirname, '../src/core/index.ts'),
+      'anticipate/react': path.resolve(__dirname, '../src/react/index.ts'),
+      'anticipate/core': path.resolve(__dirname, '../src/core/index.ts'),
     },
   },
 })

@@ -1,5 +1,5 @@
 import { type CSSProperties } from 'react'
-import type { TrajectorySnapshot } from 'anticipated/core'
+import type { TrajectorySnapshot } from 'anticipate/core'
 import { useNavigate } from 'react-router-dom'
 import { useFakeRequest } from '../lib/useFakeRequest.js'
 import { fakeFetch } from '../lib/fakeFetch.js'
@@ -31,7 +31,7 @@ function StatCard({ stat }: { stat: DashboardStat }) {
 
   const ref = register(`stat-${stat.id}`, {
     whenApproaching: () => {
-      if (!getSettings().isAnticipatedEnabled) return
+      if (!getSettings().isAnticipateEnabled) return
       const preloadFn: (() => boolean) | undefined = PRELOAD_MAP[stat.linkTo]
       if (preloadFn?.()) incrementPreloadCount()
     },
@@ -48,8 +48,8 @@ function StatCard({ stat }: { stat: DashboardStat }) {
       className={`stat-card ${isGlowing ? 'glowing' : ''}`}
       style={glowStyle}
       onClick={() => navigate(stat.linkTo)}
-      data-anticipated-id={`stat-${stat.id}`}
-      data-anticipated-tolerance="20"
+      data-anticipate-id={`stat-${stat.id}`}
+      data-anticipate-tolerance="20"
     >
       <ConfidenceBadge snapshot={snapshot} isVisible={settings.isShowingPredictions} />
       <span className="stat-label">{stat.label}</span>

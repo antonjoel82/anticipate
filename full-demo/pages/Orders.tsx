@@ -1,5 +1,5 @@
 import { useState, type CSSProperties } from 'react'
-import type { TrajectorySnapshot } from 'anticipated/core'
+import type { TrajectorySnapshot } from 'anticipate/core'
 import { useFakeRequest } from '../lib/useFakeRequest.js'
 import { fakeFetch } from '../lib/fakeFetch.js'
 import { ORDERS, getOrderDetail, type Order, type OrderDetail as OrderDetailType } from '../lib/fakeData.js'
@@ -35,7 +35,7 @@ function OrderRow({ order, isSelected, onSelect }: { order: Order; isSelected: b
 
   const ref = register(`order-${order.id}`, {
     whenApproaching: () => {
-      if (!getSettings().isAnticipatedEnabled) return
+      if (!getSettings().isAnticipateEnabled) return
       if (preload(`order-detail-${order.id}`, () => fakeFetch(getOrderDetail(order.id)))) {
         incrementPreloadCount()
       }
@@ -53,8 +53,8 @@ function OrderRow({ order, isSelected, onSelect }: { order: Order; isSelected: b
       className={`table-row ${isSelected ? 'selected' : ''} ${isGlowing ? 'glowing' : ''}`}
       style={glowStyle}
       onClick={onSelect}
-      data-anticipated-id={`order-${order.id}`}
-      data-anticipated-tolerance="15"
+      data-anticipate-id={`order-${order.id}`}
+      data-anticipate-tolerance="15"
     >
       <td className="table-cell mono">{order.id}</td>
       <td className="table-cell">{order.customerName}</td>

@@ -1,6 +1,6 @@
 import { createContext, useContext, type ReactNode } from 'react'
-import { useTrajectory } from 'anticipated/react'
-import type { RegisterConfig, TrajectorySnapshot, TriggerOptions } from 'anticipated/core'
+import { useTrajectory } from 'anticipate/react'
+import type { RegisterConfig, TrajectorySnapshot, TriggerOptions } from 'anticipate/core'
 import type { RefCallback } from 'react'
 import { useDemoStore, type DemoSettings } from '../lib/demoStore.js'
 

@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { AnticipatedProfiler } from './profiler.js'
+import { AnticipateProfiler } from './profiler.js'
 import { TrajectoryEngine } from '../core/engine.js'
 
-describe('AnticipatedProfiler', () => {
+describe('AnticipateProfiler', () => {
   let engine: TrajectoryEngine
 
   beforeEach(() => {
@@ -11,13 +11,13 @@ describe('AnticipatedProfiler', () => {
   })
 
   it('creates with default options', () => {
-    const profiler = new AnticipatedProfiler(engine)
+    const profiler = new AnticipateProfiler(engine)
     expect(profiler).toBeDefined()
     profiler.destroy()
   })
 
   it('creates with custom options', () => {
-    const profiler = new AnticipatedProfiler(engine, {
+    const profiler = new AnticipateProfiler(engine, {
       confirmationWindowMs: 3000,
       persistAcrossNavigations: false,
       maxEventsStored: 100,
@@ -27,7 +27,7 @@ describe('AnticipatedProfiler', () => {
   })
 
   it('getReport returns empty report initially', () => {
-    const profiler = new AnticipatedProfiler(engine)
+    const profiler = new AnticipateProfiler(engine)
     const report = profiler.getReport()
     expect(report.predictions).toBe(0)
     expect(report.confirmed).toBe(0)
@@ -37,7 +37,7 @@ describe('AnticipatedProfiler', () => {
   })
 
   it('confirmNavigation manually confirms a prediction', () => {
-    const profiler = new AnticipatedProfiler(engine)
+    const profiler = new AnticipateProfiler(engine)
 
     const el = document.createElement('div')
     vi.spyOn(el, 'getBoundingClientRect').mockReturnValue({
@@ -61,7 +61,7 @@ describe('AnticipatedProfiler', () => {
   })
 
   it('reset clears all data', () => {
-    const profiler = new AnticipatedProfiler(engine)
+    const profiler = new AnticipateProfiler(engine)
     const el = document.createElement('div')
     vi.spyOn(el, 'getBoundingClientRect').mockReturnValue({
       left: 100, top: 100, right: 200, bottom: 200,
@@ -84,13 +84,13 @@ describe('AnticipatedProfiler', () => {
   })
 
   it('destroy unsubscribes from engine', () => {
-    const profiler = new AnticipatedProfiler(engine)
+    const profiler = new AnticipateProfiler(engine)
     profiler.destroy()
     expect(() => profiler.destroy()).not.toThrow()
   })
 
   it('getFlows returns flow reports', () => {
-    const profiler = new AnticipatedProfiler(engine)
+    const profiler = new AnticipateProfiler(engine)
     const flows = profiler.getFlows()
     expect(flows).toEqual([])
     profiler.destroy()
@@ -106,7 +106,7 @@ describe('subscribable snapshot', () => {
   })
 
   it('subscribe returns unsubscribe function', () => {
-    const profiler = new AnticipatedProfiler(engine)
+    const profiler = new AnticipateProfiler(engine)
     const listener = vi.fn()
     const unsub = profiler.subscribe(listener)
     expect(typeof unsub).toBe('function')
@@ -115,7 +115,7 @@ describe('subscribable snapshot', () => {
   })
 
   it('getSnapshot returns stable shape', () => {
-    const profiler = new AnticipatedProfiler(engine)
+    const profiler = new AnticipateProfiler(engine)
     const snap = profiler.getSnapshot()
     expect(snap).toHaveProperty('report')
     expect(snap).toHaveProperty('events')
@@ -125,7 +125,7 @@ describe('subscribable snapshot', () => {
   })
 
   it('notifies subscribers on new prediction event', () => {
-    const profiler = new AnticipatedProfiler(engine)
+    const profiler = new AnticipateProfiler(engine)
     const el = document.createElement('div')
     vi.spyOn(el, 'getBoundingClientRect').mockReturnValue({
       left: 100, top: 100, right: 200, bottom: 200,
@@ -145,7 +145,7 @@ describe('subscribable snapshot', () => {
   })
 
   it('setEnabled(false) stops recording events', () => {
-    const profiler = new AnticipatedProfiler(engine)
+    const profiler = new AnticipateProfiler(engine)
     profiler.setEnabled(false)
     expect(profiler.getSnapshot().enabled).toBe(false)
     profiler.destroy()

@@ -1,1 +1,1 @@
-export { AnticipatedDevtools } from './AnticipatedDevtools.js'
+export { AnticipateDevtools } from './AnticipateDevtools.js'

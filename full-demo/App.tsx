@@ -9,7 +9,7 @@ import { Onboarding } from './pages/Onboarding.js'
 
 export function App() {
   return (
-    <BrowserRouter>
+    <BrowserRouter basename="/anticipate">
       <TrajectoryProvider>
         <div className="app-layout">
           <Sidebar />

@@ -1,5 +1,5 @@
 import { useState, type CSSProperties } from 'react'
-import type { TrajectorySnapshot } from 'anticipated/core'
+import type { TrajectorySnapshot } from 'anticipate/core'
 import { useFakeRequest } from '../lib/useFakeRequest.js'
 import { fakeFetch } from '../lib/fakeFetch.js'
 import { ONBOARDING_STEPS, type OnboardingStep } from '../lib/fakeData.js'
@@ -101,7 +101,7 @@ export function Onboarding() {
 
   const nextRef = register(`wizard-next-${currentStep}`, {
     whenApproaching: () => {
-      if (!getSettings().isAnticipatedEnabled) return
+      if (!getSettings().isAnticipateEnabled) return
       const nextStep: number = currentStep + 1
       if (nextStep < totalSteps) {
         if (preload(`onboarding-step-${nextStep}`, () => fakeFetch(ONBOARDING_STEPS[nextStep]))) {
@@ -114,7 +114,7 @@ export function Onboarding() {
 
   const backRef = register(`wizard-back-${currentStep}`, {
     whenApproaching: () => {
-      if (!getSettings().isAnticipatedEnabled) return
+      if (!getSettings().isAnticipateEnabled) return
       const prevStep: number = currentStep - 1
       if (prevStep >= 0) {
         if (preload(`onboarding-step-${prevStep}`, () => fakeFetch(ONBOARDING_STEPS[prevStep]))) {
@@ -185,8 +185,8 @@ export function Onboarding() {
               className={`btn btn-secondary ${isBackGlowing ? 'glowing' : ''}`}
               style={backGlow}
               onClick={handleBack}
-              data-anticipated-id={`wizard-back-${currentStep}`}
-              data-anticipated-tolerance="30"
+              data-anticipate-id={`wizard-back-${currentStep}`}
+              data-anticipate-tolerance="30"
             >
               Back
               <ConfidenceBadge snapshot={backSnapshot} isVisible={settings.isShowingPredictions} />
@@ -203,8 +203,8 @@ export function Onboarding() {
               className={`btn btn-primary ${isNextGlowing ? 'glowing' : ''}`}
               style={nextGlow}
               onClick={handleNext}
-              data-anticipated-id={`wizard-next-${currentStep}`}
-              data-anticipated-tolerance="30"
+              data-anticipate-id={`wizard-next-${currentStep}`}
+              data-anticipate-tolerance="30"
             >
               Next
               <ConfidenceBadge snapshot={nextSnapshot} isVisible={settings.isShowingPredictions} />

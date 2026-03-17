@@ -1,11 +1,11 @@
-import type { AnticipatedDevEventMap } from './types.js'
+import type { AnticipateDevEventMap } from './types.js'
 
-type Listener<K extends keyof AnticipatedDevEventMap> = (data: AnticipatedDevEventMap[K]) => void
+type Listener<K extends keyof AnticipateDevEventMap> = (data: AnticipateDevEventMap[K]) => void
 
 export class DevEventEmitter {
-  private readonly listeners = new Map<keyof AnticipatedDevEventMap, Set<Listener<any>>>()
+  private readonly listeners = new Map<keyof AnticipateDevEventMap, Set<Listener<any>>>()
 
-  on<K extends keyof AnticipatedDevEventMap>(event: K, listener: Listener<K>): () => void {
+  on<K extends keyof AnticipateDevEventMap>(event: K, listener: Listener<K>): () => void {
     let set = this.listeners.get(event)
     if (!set) {
       set = new Set()
@@ -18,7 +18,7 @@ export class DevEventEmitter {
     }
   }
 
-  emit<K extends keyof AnticipatedDevEventMap>(event: K, data: AnticipatedDevEventMap[K]): void {
+  emit<K extends keyof AnticipateDevEventMap>(event: K, data: AnticipateDevEventMap[K]): void {
     const set = this.listeners.get(event)
     if (!set) return
     for (const listener of set) {
