@@ -1,10 +1,10 @@
 import { useState } from 'react'
-import type { AnticipateProfiler, ProfilerSnapshot } from '../profiler.js'
+import type { AnticipatedProfiler, ProfilerSnapshot } from '../profiler.js'
 import type { PredictionFiredEvent } from '../types.js'
 
 type DevtoolsPanelProps = {
   snapshot: ProfilerSnapshot
-  profiler: AnticipateProfiler
+  profiler: AnticipatedProfiler
 }
 
 const panelStyle: React.CSSProperties = {

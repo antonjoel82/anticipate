@@ -1,11 +1,11 @@
-# foresee
+# anticipated
 
 Cursor trajectory prediction for the web. Knows where the user is going before they get there.
 
 Uses EWMA-smoothed velocity extrapolation + finite-segment/AABB intersection to predict which UI element a cursor is heading toward — then fires callbacks with configurable trigger profiles.
 
 ```
-pnpm add foresee
+pnpm add anticipated
 ```
 
 ## Quick Start
@@ -13,10 +13,10 @@ pnpm add foresee
 ### React
 
 ```tsx
-import { useTrajectory } from 'foresee/react'
+import { useAnticipated } from 'anticipated/react'
 
 function Nav() {
-  const { register, useSnapshot } = useTrajectory()
+  const { register, useSnapshot } = useAnticipated()
 
   const ref = register('settings', {
     whenApproaching: () => prefetchSettingsData(),
@@ -36,7 +36,7 @@ function Nav() {
 ### Vanilla
 
 ```ts
-import { TrajectoryEngine } from 'foresee/core'
+import { TrajectoryEngine } from 'anticipated/core'
 
 const engine = new TrajectoryEngine()
 
@@ -82,7 +82,7 @@ Each animation frame:
 
 ```mermaid
 graph TB
-  subgraph "foresee/core"
+  subgraph "anticipated/core"
     Engine[TrajectoryEngine]
     Pred[Prediction<br/>EWMA + extrapolation]
     Inter[Intersection<br/>slab method]
@@ -99,8 +99,8 @@ graph TB
     Engine --> Val
   end
 
-  subgraph "foresee/react"
-    Hook[useTrajectory]
+  subgraph "anticipated/react"
+    Hook[useAnticipated]
     Hook --> Engine
   end
 ```
@@ -141,12 +141,12 @@ const engine = new TrajectoryEngine(options?)
 | `subscribeToElement(id)` | Per-element subscription factory |
 | `invalidateRects()` | Force bounding-rect refresh |
 
-### `useTrajectory(options?)`
+### `useAnticipated(options?)`
 
 React hook. Creates and manages a `TrajectoryEngine` lifecycle.
 
 ```ts
-const { register, useSnapshot, getSnapshot, trigger } = useTrajectory(options?)
+const { register, useSnapshot, getSnapshot, trigger } = useAnticipated(options?)
 ```
 
 | Return | Type | Description |
@@ -272,11 +272,11 @@ Expands an element's bounding box for hit testing. Useful for small targets.
 
 | Import | Contents |
 |---|---|
-| `foresee` | Core re-exports |
-| `foresee/core` | `TrajectoryEngine`, math utils, types, constants |
-| `foresee/react` | `useTrajectory` hook |
+| `anticipated` | Core re-exports |
+| `anticipated/core` | `TrajectoryEngine`, math utils, types, constants |
+| `anticipated/react` | `useAnticipated` hook |
 
-React is an **optional** peer dependency — `foresee/core` has zero runtime dependencies.
+React is an **optional** peer dependency — `anticipated/core` has zero runtime dependencies.
 
 ---
 
@@ -292,7 +292,7 @@ Opens a demo page at `http://localhost:5173` with a sidebar nav + form. Elements
 
 ## Tuning Constants
 
-All constants are exported from `foresee/core` for reference:
+All constants are exported from `anticipated/core` for reference:
 
 | Constant | Value | Purpose |
 |---|---|---|

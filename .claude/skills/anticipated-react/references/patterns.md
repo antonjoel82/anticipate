@@ -6,7 +6,7 @@ Prefetch data when the cursor heads toward a navigation link:
 
 ```tsx
 function NavItem({ href, label }: { href: string; label: string }) {
-  const { register } = useTrajectory()
+  const { register } = useAnticipated()
 
   const ref = register(`nav-${href}`, {
     whenApproaching: () => {
@@ -41,7 +41,7 @@ Progressive green glow as confidence exceeds a threshold:
 const GLOW_THRESHOLD = 0.5
 
 function GlowButton({ id, label }: { id: string; label: string }) {
-  const { register, useSnapshot } = useTrajectory()
+  const { register, useSnapshot } = useAnticipated()
   const ref = register(id, { whenApproaching: () => {}, tolerance: 30 })
   const snap = useSnapshot(id)
 
@@ -72,7 +72,7 @@ Fade elements in as cursor gets closer:
 
 ```tsx
 function ProximityCard({ id }: { id: string }) {
-  const { register, useSnapshot } = useTrajectory()
+  const { register, useSnapshot } = useAnticipated()
   const ref = register(id, {
     triggerOn: () => ({ isTriggered: false }),
     whenTriggered: () => {},
@@ -95,7 +95,7 @@ Speed up animation when cursor moves fast toward an element:
 
 ```tsx
 function VelocityDot({ id }: { id: string }) {
-  const { register, useSnapshot } = useTrajectory()
+  const { register, useSnapshot } = useAnticipated()
   const ref = register(id, {
     triggerOn: (snap) => ({ isTriggered: snap.velocity.magnitude > 100 }),
     whenTriggered: () => {},
@@ -115,10 +115,10 @@ function VelocityDot({ id }: { id: string }) {
 Pass `register` and `useSnapshot` through context or props:
 
 ```tsx
-const TrajectoryContext = createContext<UseTrajectoryReturn | null>(null)
+const TrajectoryContext = createContext<UseAnticipatedReturn | null>(null)
 
 function TrajectoryProvider({ children }: { children: React.ReactNode }) {
-  const trajectory = useTrajectory({ predictionWindow: 150 })
+  const trajectory = useAnticipated({ predictionWindow: 150 })
   return (
     <TrajectoryContext.Provider value={trajectory}>
       {children}
@@ -126,7 +126,7 @@ function TrajectoryProvider({ children }: { children: React.ReactNode }) {
   )
 }
 
-function useSharedTrajectory(): UseTrajectoryReturn {
+function useSharedTrajectory(): UseAnticipatedReturn {
   const ctx = useContext(TrajectoryContext)
   if (!ctx) throw new Error('Missing TrajectoryProvider')
   return ctx
@@ -135,7 +135,7 @@ function useSharedTrajectory(): UseTrajectoryReturn {
 
 ## SSR Safety
 
-`useTrajectory` is SSR-safe. The engine is only created when `typeof window !== 'undefined'`. On the server:
+`useAnticipated` is SSR-safe. The engine is only created when `typeof window !== 'undefined'`. On the server:
 
 - `register()` returns a no-op ref callback
 - `useSnapshot()` returns `undefined`
@@ -152,8 +152,8 @@ Mock the hook in tests:
 import { vi } from 'vitest'
 import { render } from '@testing-library/react'
 
-vi.mock('foresee/react', () => ({
-  useTrajectory: () => ({
+vi.mock('anticipated/react', () => ({
+  useAnticipated: () => ({
     register: () => () => {},
     useSnapshot: () => ({ isIntersecting: true, confidence: 0.8, distancePx: 50, velocity: { x: 0, y: 0, magnitude: 0, angle: 0 }, predictedPoint: { x: 0, y: 0 } }),
     getSnapshot: () => undefined,

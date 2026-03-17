@@ -27,9 +27,9 @@ export function DevtoolsToggle({ onClick, isOpen }: DevtoolsToggleProps) {
     <button
       style={toggleStyle}
       onClick={onClick}
-      aria-label="anticipate"
+      aria-label="anticipated"
     >
-      {isOpen ? '×' : '◉'} anticipate
+      {isOpen ? '×' : '◉'} anticipated
     </button>
   )
 }

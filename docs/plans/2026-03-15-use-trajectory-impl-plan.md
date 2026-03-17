@@ -1,8 +1,8 @@
-# useTrajectory Implementation Plan
+# useAnticipated Implementation Plan
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
-**Goal:** Implement `foresee` — a cursor trajectory prediction library with a framework-agnostic core and React hook.
+**Goal:** Implement `anticipated` — a cursor trajectory prediction library with a framework-agnostic core and React hook.
 
 **Architecture:** Core engine (`src/core/`) handles prediction math, intersection tests, and trigger evaluation. React wrapper (`src/react/`) is a thin hook using `useSyncExternalStore`. Zero external runtime dependencies.
 
@@ -45,7 +45,7 @@ graph TD
 | 7 | Prediction (EWMA + Extrapolation) | 2, 4 | 20 min |
 | 8 | Trigger System | 2 | 15 min |
 | 9 | TrajectoryEngine | 3, 5, 6, 7, 8 | 30 min |
-| 10 | React Hook (useTrajectory) | 9 | 20 min |
+| 10 | React Hook (useAnticipated) | 9 | 20 min |
 | 11 | Integration Tests | 9 | 15 min |
 | 12 | Build + Package Exports | 10 | 10 min |
 
@@ -979,33 +979,33 @@ git add -A && git commit -m "feat: add TrajectoryEngine — core orchestrator"
 
 ---
 
-## Task 10: React Hook (useTrajectory)
+## Task 10: React Hook (useAnticipated)
 
 **Files:**
-- Create: `src/react/useTrajectory.ts`
-- Test: `src/react/useTrajectory.test.ts`
+- Create: `src/react/useAnticipated.ts`
+- Test: `src/react/useAnticipated.test.ts`
 - Update: `src/react/index.ts`
 
 **Step 1: Write the failing test**
 
 ```typescript
-// src/react/useTrajectory.test.ts
+// src/react/useAnticipated.test.ts
 import { describe, it, expect, vi } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
-import { useTrajectory } from './useTrajectory.js'
+import { useAnticipated } from './useAnticipated.js'
 
 // Note: need to install @testing-library/react as devDep
 
-describe('useTrajectory', () => {
+describe('useAnticipated', () => {
   it('returns register, useSnapshot, and getSnapshot', () => {
-    const { result } = renderHook(() => useTrajectory())
+    const { result } = renderHook(() => useAnticipated())
     expect(result.current.register).toBeDefined()
     expect(result.current.useSnapshot).toBeDefined()
     expect(result.current.getSnapshot).toBeDefined()
   })
 
   it('register returns a ref callback', () => {
-    const { result } = renderHook(() => useTrajectory())
+    const { result } = renderHook(() => useAnticipated())
     const ref = result.current.register('test', {
       triggerOn: () => ({ isTriggered: false }),
       whenTriggered: () => {},
@@ -1015,13 +1015,13 @@ describe('useTrajectory', () => {
   })
 
   it('getSnapshot returns undefined for unregistered element', () => {
-    const { result } = renderHook(() => useTrajectory())
+    const { result } = renderHook(() => useAnticipated())
     expect(result.current.getSnapshot('nonexistent')).toBeUndefined()
   })
 
   it('SSR safe — does not crash without window', () => {
     // happy-dom provides window, but the hook should handle missing window
-    const { result } = renderHook(() => useTrajectory())
+    const { result } = renderHook(() => useAnticipated())
     expect(result.current).toBeDefined()
   })
 })
@@ -1031,10 +1031,10 @@ describe('useTrajectory', () => {
 
 ```bash
 pnpm add -D @testing-library/react
-pnpm exec vitest run src/react/useTrajectory.test.ts
+pnpm exec vitest run src/react/useAnticipated.test.ts
 ```
 
-**Step 3: Implement useTrajectory hook**
+**Step 3: Implement useAnticipated hook**
 
 See design doc "React Hook Implementation" section. Key: configsRef pattern, useSyncExternalStore, RefCallback.
 
@@ -1044,7 +1044,7 @@ See design doc "React Hook Implementation" section. Key: configsRef pattern, use
 
 ```typescript
 // src/react/index.ts
-export { useTrajectory } from './useTrajectory.js'
+export { useAnticipated } from './useAnticipated.js'
 
 // src/core/index.ts
 export { TrajectoryEngine } from './engine.js'
@@ -1055,7 +1055,7 @@ export { ... } from './constants.js'
 **Step 6: Commit**
 
 ```bash
-git add -A && git commit -m "feat: add useTrajectory React hook with per-element subscriptions"
+git add -A && git commit -m "feat: add useAnticipated React hook with per-element subscriptions"
 ```
 
 ---
@@ -1202,7 +1202,7 @@ gantt
     Task 9 - TrajectoryEngine   :t9, after t7, 30m
 
     section React
-    Task 10 - useTrajectory     :t10, after t9, 20m
+    Task 10 - useAnticipated     :t10, after t9, 20m
 
     section Verification
     Task 11 - Integration Tests :t11, after t9, 15m

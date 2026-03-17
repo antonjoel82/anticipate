@@ -1,15 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { TrajectoryEngine } from '../core/engine.js'
-import { AnticipateProfiler } from './profiler.js'
+import { AnticipatedProfiler } from './profiler.js'
 
-describe('AnticipateProfiler integration', () => {
+describe('AnticipatedProfiler integration', () => {
   beforeEach(() => {
     sessionStorage.clear()
   })
 
   it('full cycle: register → trigger → confirm → report shows TP', () => {
     const engine = new TrajectoryEngine()
-    const profiler = new AnticipateProfiler(engine)
+    const profiler = new AnticipatedProfiler(engine)
 
     const el = document.createElement('div')
     vi.spyOn(el, 'getBoundingClientRect').mockReturnValue({
@@ -41,7 +41,7 @@ describe('AnticipateProfiler integration', () => {
 
   it('false positive: prediction fires but user never clicks', () => {
     const engine = new TrajectoryEngine()
-    const profiler = new AnticipateProfiler(engine, { confirmationWindowMs: 100 })
+    const profiler = new AnticipatedProfiler(engine, { confirmationWindowMs: 100 })
 
     const el = document.createElement('div')
     vi.spyOn(el, 'getBoundingClientRect').mockReturnValue({
@@ -69,7 +69,7 @@ describe('AnticipateProfiler integration', () => {
 
   it('sessionStorage persistence: state survives across profiler instances', () => {
     const engine1 = new TrajectoryEngine()
-    const profiler1 = new AnticipateProfiler(engine1, { persistAcrossNavigations: true })
+    const profiler1 = new AnticipatedProfiler(engine1, { persistAcrossNavigations: true })
 
     const el = document.createElement('div')
     vi.spyOn(el, 'getBoundingClientRect').mockReturnValue({
@@ -88,7 +88,7 @@ describe('AnticipateProfiler integration', () => {
     engine1.destroy()
 
     const engine2 = new TrajectoryEngine()
-    const profiler2 = new AnticipateProfiler(engine2, { persistAcrossNavigations: true })
+    const profiler2 = new AnticipatedProfiler(engine2, { persistAcrossNavigations: true })
 
     const report = profiler2.getReport()
     expect(report.predictions).toBeGreaterThanOrEqual(1)

@@ -28,7 +28,7 @@ import {
   DEFAULT_CONFIDENCE_THRESHOLD,
 } from './constants.js'
 import { DevEventEmitter } from '../devtools/events.js'
-import type { AnticipateDevEventMap } from '../devtools/types.js'
+import type { AnticipatedDevEventMap } from '../devtools/types.js'
 
 type RegisteredElement = {
   element: HTMLElement
@@ -175,9 +175,9 @@ export class TrajectoryEngine {
     }
   }
 
-  onDev<K extends keyof AnticipateDevEventMap>(
+  onDev<K extends keyof AnticipatedDevEventMap>(
     event: K,
-    listener: (data: AnticipateDevEventMap[K]) => void,
+    listener: (data: AnticipatedDevEventMap[K]) => void,
   ): () => void {
     return this.devEmitter.on(event, listener)
   }

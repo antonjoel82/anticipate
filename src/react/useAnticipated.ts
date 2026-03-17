@@ -10,14 +10,14 @@ import type {
 
 type SubscribeFn = (callback: () => void) => () => void
 
-type UseTrajectoryReturn = {
+type UseAnticipatedReturn = {
   register: (id: string, config: RegisterConfig) => RefCallback<HTMLElement>
   trigger: (id: string, options?: TriggerOptions) => void
   getSnapshot: (id: string) => TrajectorySnapshot | undefined
   useSnapshot: (id: string) => TrajectorySnapshot | undefined
 }
 
-export function useTrajectory(options?: EngineOptions): UseTrajectoryReturn {
+export function useAnticipated(options?: EngineOptions): UseAnticipatedReturn {
   const engineRef = useRef<TrajectoryEngine | null>(null)
   const configsRef = useRef<Map<string, RegisterConfig>>(new Map())
   const subscribeCache = useRef<Map<string, SubscribeFn>>(new Map())

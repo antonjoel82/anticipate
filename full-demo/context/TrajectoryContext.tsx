@@ -1,6 +1,6 @@
 import { createContext, useContext, type ReactNode } from 'react'
-import { useTrajectory } from 'anticipate/react'
-import type { RegisterConfig, TrajectorySnapshot, TriggerOptions } from 'anticipate/core'
+import { useAnticipated } from 'anticipated/react'
+import type { RegisterConfig, TrajectorySnapshot, TriggerOptions } from 'anticipated/core'
 import type { RefCallback } from 'react'
 import { useDemoStore, type DemoSettings } from '../lib/demoStore.js'
 
@@ -14,7 +14,7 @@ type TrajectoryContextType = {
 const TrajectoryContext = createContext<TrajectoryContextType | null>(null)
 
 function TrajectoryProviderInner({ settings, children }: { settings: DemoSettings; children: ReactNode }) {
-  const trajectory = useTrajectory({
+  const trajectory = useAnticipated({
     predictionWindow: settings.predictionWindow,
     smoothingFactor: settings.smoothingFactor,
     confidenceSaturationFrames: settings.confidenceSaturationFrames,

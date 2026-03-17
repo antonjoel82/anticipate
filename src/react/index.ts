@@ -1,1 +1,1 @@
-export { useTrajectory } from './useTrajectory.js'
+export { useAnticipated } from './useAnticipated.js'

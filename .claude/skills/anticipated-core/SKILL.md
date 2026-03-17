@@ -1,17 +1,17 @@
 ---
-name: foresee-core
-description: Framework-agnostic cursor trajectory prediction engine. Use when building predictive UI with TrajectoryEngine — registering elements, configuring trigger profiles, handling snapshots, or integrating foresee/core into non-React frameworks.
+name: anticipated-core
+description: Framework-agnostic cursor trajectory prediction engine. Use when building predictive UI with TrajectoryEngine — registering elements, configuring trigger profiles, handling snapshots, or integrating anticipated/core into non-React frameworks.
 ---
 
-# Foresee Core Engine
+# Anticipated Core Engine
 
-Cursor trajectory prediction via EWMA-smoothed velocity extrapolation + segment/AABB intersection. Import from `foresee/core`.
+Cursor trajectory prediction via EWMA-smoothed velocity extrapolation + segment/AABB intersection. Import from `anticipated/core`.
 
 ## Quick Start
 
 ```ts
-import { TrajectoryEngine } from 'foresee/core'
-import type { ElementConfig, TrajectorySnapshot } from 'foresee/core'
+import { TrajectoryEngine } from 'anticipated/core'
+import type { ElementConfig, TrajectorySnapshot } from 'anticipated/core'
 
 const engine = new TrajectoryEngine({ predictionWindow: 150 })
 

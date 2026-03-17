@@ -48,14 +48,14 @@ export function DebugOverlay() {
       const h: number = canvas.height / (window.devicePixelRatio || 1)
       ctx.clearRect(0, 0, w, h)
 
-      const tracked: NodeListOf<Element> = document.querySelectorAll('[data-anticipate-id]')
+      const tracked: NodeListOf<Element> = document.querySelectorAll('[data-anticipated-id]')
       let predictedX = 0
       let predictedY = 0
       let hasPrediction = false
 
       tracked.forEach((el) => {
-        const id: string = el.getAttribute('data-anticipate-id')!
-        const tolerance: number = Number(el.getAttribute('data-anticipate-tolerance') ?? '0')
+        const id: string = el.getAttribute('data-anticipated-id')!
+        const tolerance: number = Number(el.getAttribute('data-anticipated-tolerance') ?? '0')
         const rect: DOMRect = el.getBoundingClientRect()
 
         if (!hasPrediction) {

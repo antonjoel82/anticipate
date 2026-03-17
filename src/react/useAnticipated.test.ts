@@ -1,10 +1,10 @@
 import { describe, it, expect } from 'vitest'
 import { renderHook } from '@testing-library/react'
-import { useTrajectory } from './useTrajectory.js'
+import { useAnticipated } from './useAnticipated.js'
 
-describe('useTrajectory', () => {
+describe('useAnticipated', () => {
   it('returns register, useSnapshot, getSnapshot, and trigger', () => {
-    const { result } = renderHook(() => useTrajectory())
+    const { result } = renderHook(() => useAnticipated())
     expect(result.current.register).toBeDefined()
     expect(result.current.useSnapshot).toBeDefined()
     expect(result.current.getSnapshot).toBeDefined()
@@ -12,7 +12,7 @@ describe('useTrajectory', () => {
   })
 
   it('register returns a ref callback function', () => {
-    const { result } = renderHook(() => useTrajectory())
+    const { result } = renderHook(() => useAnticipated())
     const ref = result.current.register('test', {
       triggerOn: () => ({ isTriggered: false }),
       whenTriggered: () => {},
@@ -22,22 +22,22 @@ describe('useTrajectory', () => {
   })
 
   it('getSnapshot returns undefined for unregistered element', () => {
-    const { result } = renderHook(() => useTrajectory())
+    const { result } = renderHook(() => useAnticipated())
     expect(result.current.getSnapshot('nonexistent')).toBeUndefined()
   })
 
   it('is SSR safe — does not crash without DOM interactions', () => {
-    const { result } = renderHook(() => useTrajectory())
+    const { result } = renderHook(() => useAnticipated())
     expect(result.current).toBeDefined()
   })
 
   it('accepts engine options', () => {
-    const { result } = renderHook(() => useTrajectory({ predictionWindow: 200 }))
+    const { result } = renderHook(() => useAnticipated({ predictionWindow: 200 }))
     expect(result.current).toBeDefined()
   })
 
   it('register with convenience config (whenApproaching)', () => {
-    const { result } = renderHook(() => useTrajectory())
+    const { result } = renderHook(() => useAnticipated())
     const ref = result.current.register('test', {
       whenApproaching: () => {},
       tolerance: 20,
@@ -46,7 +46,7 @@ describe('useTrajectory', () => {
   })
 
   it('ref callback handles null (cleanup)', () => {
-    const { result } = renderHook(() => useTrajectory())
+    const { result } = renderHook(() => useAnticipated())
     const ref = result.current.register('test', {
       triggerOn: () => ({ isTriggered: false }),
       whenTriggered: () => {},

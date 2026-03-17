@@ -40,8 +40,8 @@ export function SettingsPanel() {
   const settings = useDemoStore()
   const [isCollapsed, setIsCollapsed] = useState(false)
 
-  const handleToggleForesee = () => {
-    updateSettings({ isAnticipateEnabled: !settings.isAnticipateEnabled })
+  const handleToggleAnticipated = () => {
+    updateSettings({ isAnticipatedEnabled: !settings.isAnticipatedEnabled })
     clearCache()
     resetPreloadCount()
   }
@@ -75,13 +75,13 @@ export function SettingsPanel() {
           </div>
 
           <div className="settings-row">
-            <span className="settings-label">Anticipate</span>
+            <span className="settings-label">Anticipated</span>
             <button
-              className={`toggle-switch ${settings.isAnticipateEnabled ? 'on' : 'off'}`}
-              onClick={handleToggleForesee}
+              className={`toggle-switch ${settings.isAnticipatedEnabled ? 'on' : 'off'}`}
+              onClick={handleToggleAnticipated}
             >
               <span className="toggle-thumb" />
-              <span className="toggle-text">{settings.isAnticipateEnabled ? 'ON' : 'OFF'}</span>
+              <span className="toggle-text">{settings.isAnticipatedEnabled ? 'ON' : 'OFF'}</span>
             </button>
           </div>
 

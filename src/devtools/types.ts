@@ -20,7 +20,7 @@ export type CallbackEndEvent = {
   status: 'success' | 'error'
 }
 
-export interface AnticipateDevEventMap {
+export interface AnticipatedDevEventMap {
   'prediction:fired': PredictionFiredEvent
   'prediction:callback-start': CallbackStartEvent
   'prediction:callback-end': CallbackEndEvent

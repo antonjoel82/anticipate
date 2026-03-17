@@ -1,5 +1,5 @@
 {
-  "name": "anticipate",
+  "name": "anticipated",
   "version": "0.0.1",
   "description": "Cursor trajectory prediction for the web. Knows where the user is going before they get there.",
   "main": "dist/index.js",
@@ -60,13 +60,13 @@
   ],
   "author": "antonjoel82",
   "license": "MIT",
-  "homepage": "https://antonjoel82.github.io/anticipate",
+  "homepage": "https://antonjoel82.github.io/anticipated",
   "repository": {
     "type": "git",
-    "url": "https://github.com/antonjoel82/anticipate.git"
+    "url": "https://github.com/antonjoel82/anticipated.git"
   },
   "bugs": {
-    "url": "https://github.com/antonjoel82/anticipate/issues"
+    "url": "https://github.com/antonjoel82/anticipated/issues"
   },
   "packageManager": "pnpm@10.32.1",
   "peerDependencies": {

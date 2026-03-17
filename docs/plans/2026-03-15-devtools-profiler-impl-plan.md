@@ -1,10 +1,10 @@
-# foresee/devtools Implementation Plan
+# anticipated/devtools Implementation Plan
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
-**Goal:** Implement `foresee/devtools` — a prediction value profiler that measures whether foresee's cursor trajectory predictions actually delivered measurable UX gains, including across multi-step navigation flows.
+**Goal:** Implement `anticipated/devtools` — a prediction value profiler that measures whether anticipated's cursor trajectory predictions actually delivered measurable UX gains, including across multi-step navigation flows.
 
-**Architecture:** Engine emits typed dev events (zero-cost when no listeners). A `ForeseeProfiler` class correlates prediction events against actual user actions (clicks, navigations) to compute precision, recall, lead time, and per-flow time savings. Cross-navigation state persists in sessionStorage. An interactive React panel (`<ForeseeDevtools />`) provides TanStack-style developer UX.
+**Architecture:** Engine emits typed dev events (zero-cost when no listeners). A `AnticipatedProfiler` class correlates prediction events against actual user actions (clicks, navigations) to compute precision, recall, lead time, and per-flow time savings. Cross-navigation state persists in sessionStorage. An interactive React panel (`<AnticipatedDevtools />`) provides TanStack-style developer UX.
 
 **Tech Stack:** TypeScript (strict), Vitest + happy-dom, tsup (ESM + CJS), React 19, @testing-library/react, pnpm. No external runtime dependencies in core/devtools. React is a peer dep for devtools/react only.
 
@@ -22,7 +22,7 @@ graph TD
     T4 --> T6
     T3 --> T7[Task 7: Navigation Correlation]
     T4 --> T7
-    T6 --> T8[Task 8: ForeseeProfiler Class]
+    T6 --> T8[Task 8: AnticipatedProfiler Class]
     T7 --> T8
     T5 --> T8
     T8 --> T9[Task 9: Integration Tests]
@@ -45,7 +45,7 @@ graph TD
 | 5 | Metrics Computation | 1 | 15 min |
 | 6 | Click Correlation | 3, 4 | 20 min |
 | 7 | Navigation Correlation (History API + PendingNavigationRecord) | 3, 4 | 20 min |
-| 8 | ForeseeProfiler Class | 5, 6, 7 | 25 min |
+| 8 | AnticipatedProfiler Class | 5, 6, 7 | 25 min |
 | 9 | Integration Tests | 8 | 20 min |
 | 10 | Build + Exports (devtools) | 9 | 10 min |
 | 11 | Profiler Subscribable Snapshot | 8 | 15 min |
@@ -86,7 +86,7 @@ describe('devtools constants', () => {
   })
 
   it('has a session storage key', () => {
-    expect(C.SESSION_STORAGE_KEY).toBe('foresee:profiler')
+    expect(C.SESSION_STORAGE_KEY).toBe('anticipated:profiler')
   })
 })
 ```
@@ -104,7 +104,7 @@ Expected: FAIL — module not found
 // src/devtools/constants.ts
 export const DEFAULT_CONFIRMATION_WINDOW_MS = 2000
 export const DEFAULT_MAX_EVENTS_STORED = 500
-export const SESSION_STORAGE_KEY = 'foresee:profiler'
+export const SESSION_STORAGE_KEY = 'anticipated:profiler'
 export const FLOW_BREAK_TIMEOUT_MS = 30000
 ```
 
@@ -134,7 +134,7 @@ export type CallbackEndEvent = {
   status: 'success' | 'error'
 }
 
-export interface ForeseeDevEventMap {
+export interface AnticipatedDevEventMap {
   'prediction:fired': PredictionFiredEvent
   'prediction:callback-start': CallbackStartEvent
   'prediction:callback-end': CallbackEndEvent
@@ -341,14 +341,14 @@ pnpm exec vitest run src/devtools/events.test.ts
 
 ```typescript
 // src/devtools/events.ts
-import type { ForeseeDevEventMap } from './types.js'
+import type { AnticipatedDevEventMap } from './types.js'
 
-type Listener<K extends keyof ForeseeDevEventMap> = (data: ForeseeDevEventMap[K]) => void
+type Listener<K extends keyof AnticipatedDevEventMap> = (data: AnticipatedDevEventMap[K]) => void
 
 export class DevEventEmitter {
-  private readonly listeners = new Map<keyof ForeseeDevEventMap, Set<Listener<any>>>()
+  private readonly listeners = new Map<keyof AnticipatedDevEventMap, Set<Listener<any>>>()
 
-  on<K extends keyof ForeseeDevEventMap>(event: K, listener: Listener<K>): () => void {
+  on<K extends keyof AnticipatedDevEventMap>(event: K, listener: Listener<K>): () => void {
     let set = this.listeners.get(event)
     if (!set) {
       set = new Set()
@@ -361,7 +361,7 @@ export class DevEventEmitter {
     }
   }
 
-  emit<K extends keyof ForeseeDevEventMap>(event: K, data: ForeseeDevEventMap[K]): void {
+  emit<K extends keyof AnticipatedDevEventMap>(event: K, data: AnticipatedDevEventMap[K]): void {
     const set = this.listeners.get(event)
     if (!set) return
     for (const listener of set) {
@@ -1302,7 +1302,7 @@ git add -A && git commit -m "feat(devtools): add NavigationCorrelator for cross-
 
 ---
 
-## Task 8: ForeseeProfiler Class
+## Task 8: AnticipatedProfiler Class
 
 **Files:**
 - Create: `src/devtools/profiler.ts`
@@ -1313,12 +1313,11 @@ The main consumer-facing class. Ties together engine events, correlators, sessio
 **Step 1: Write the failing test**
 
 ```typescript
-// src/devtools/profiler.test.ts
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { ForeseeProfiler } from './profiler.js'
+// src/devtools/profiler.ts
+import type { AnticipatedProfiler } from './profiler.js'
 import { TrajectoryEngine } from '../core/engine.js'
 
-describe('ForeseeProfiler', () => {
+describe('AnticipatedProfiler', () => {
   let engine: TrajectoryEngine
 
   beforeEach(() => {
@@ -1327,12 +1326,12 @@ describe('ForeseeProfiler', () => {
   })
 
   it('creates with default options', () => {
-    const profiler = new ForeseeProfiler(engine)
+    const profiler = new AnticipatedProfiler(engine)
     expect(profiler).toBeDefined()
   })
 
   it('creates with custom options', () => {
-    const profiler = new ForeseeProfiler(engine, {
+    const profiler = new AnticipatedProfiler(engine, {
       confirmationWindowMs: 3000,
       persistAcrossNavigations: false,
       maxEventsStored: 100,
@@ -1341,7 +1340,7 @@ describe('ForeseeProfiler', () => {
   })
 
   it('getReport returns empty report initially', () => {
-    const profiler = new ForeseeProfiler(engine)
+    const profiler = new AnticipatedProfiler(engine)
     const report = profiler.getReport()
     expect(report.predictions).toBe(0)
     expect(report.confirmed).toBe(0)
@@ -1350,7 +1349,7 @@ describe('ForeseeProfiler', () => {
   })
 
   it('confirmNavigation manually confirms a prediction', () => {
-    const profiler = new ForeseeProfiler(engine)
+    const profiler = new AnticipatedProfiler(engine)
 
     // Simulate: engine emitted a prediction event
     // (In real usage, the engine's update loop emits these)
@@ -1382,7 +1381,7 @@ describe('ForeseeProfiler', () => {
   })
 
   it('reset clears all data', () => {
-    const profiler = new ForeseeProfiler(engine)
+    const profiler = new AnticipatedProfiler(engine)
     const el = document.createElement('div')
     vi.spyOn(el, 'getBoundingClientRect').mockReturnValue({
       left: 100, top: 100, right: 200, bottom: 200,
@@ -1404,14 +1403,14 @@ describe('ForeseeProfiler', () => {
   })
 
   it('destroy unsubscribes from engine', () => {
-    const profiler = new ForeseeProfiler(engine)
+    const profiler = new AnticipatedProfiler(engine)
     profiler.destroy()
     // Should not throw on double-destroy
     expect(() => profiler.destroy()).not.toThrow()
   })
 
   it('getFlows returns flow reports', () => {
-    const profiler = new ForeseeProfiler(engine)
+    const profiler = new AnticipatedProfiler(engine)
     const flows = profiler.getFlows()
     expect(flows).toEqual([])
   })
@@ -1424,7 +1423,7 @@ describe('ForeseeProfiler', () => {
 pnpm exec vitest run src/devtools/profiler.test.ts
 ```
 
-**Step 3: Implement ForeseeProfiler**
+**Step 3: Implement AnticipatedProfiler**
 
 The profiler:
 1. Subscribes to engine dev events via `engine.onDev()`
@@ -1443,7 +1442,7 @@ pnpm exec vitest run src/devtools/profiler.test.ts
 **Step 5: Commit**
 
 ```bash
-git add -A && git commit -m "feat(devtools): add ForeseeProfiler — prediction value measurement with multi-step flow tracking"
+git add -A && git commit -m "feat(devtools): add AnticipatedProfiler — prediction value measurement with multi-step flow tracking"
 ```
 
 ---
@@ -1461,16 +1460,16 @@ End-to-end tests that simulate the full prediction → click → confirmation �
 // src/devtools/profiler.integration.test.ts
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { TrajectoryEngine } from '../core/engine.js'
-import { ForeseeProfiler } from './profiler.js'
+import { AnticipatedProfiler } from './profiler.js'
 
-describe('ForeseeProfiler integration', () => {
+describe('AnticipatedProfiler integration', () => {
   beforeEach(() => {
     sessionStorage.clear()
   })
 
   it('full cycle: register → trigger → click → report shows TP', () => {
     const engine = new TrajectoryEngine()
-    const profiler = new ForeseeProfiler(engine)
+    const profiler = new AnticipatedProfiler(engine)
 
     const el = document.createElement('div')
     vi.spyOn(el, 'getBoundingClientRect').mockReturnValue({
@@ -1504,7 +1503,7 @@ describe('ForeseeProfiler integration', () => {
 
   it('false positive: prediction fires but user never clicks', () => {
     const engine = new TrajectoryEngine()
-    const profiler = new ForeseeProfiler(engine, { confirmationWindowMs: 100 })
+    const profiler = new AnticipatedProfiler(engine, { confirmationWindowMs: 100 })
 
     const el = document.createElement('div')
     vi.spyOn(el, 'getBoundingClientRect').mockReturnValue({
@@ -1533,7 +1532,7 @@ describe('ForeseeProfiler integration', () => {
 
   it('sessionStorage persistence: state survives across profiler instances', () => {
     const engine1 = new TrajectoryEngine()
-    const profiler1 = new ForeseeProfiler(engine1, { persistAcrossNavigations: true })
+    const profiler1 = new AnticipatedProfiler(engine1, { persistAcrossNavigations: true })
 
     const el = document.createElement('div')
     vi.spyOn(el, 'getBoundingClientRect').mockReturnValue({
@@ -1553,7 +1552,7 @@ describe('ForeseeProfiler integration', () => {
 
     // "New page load" — new engine + profiler reads from sessionStorage
     const engine2 = new TrajectoryEngine()
-    const profiler2 = new ForeseeProfiler(engine2, { persistAcrossNavigations: true })
+    const profiler2 = new AnticipatedProfiler(engine2, { persistAcrossNavigations: true })
 
     const report = profiler2.getReport()
     // Previous prediction should be in pending (not yet confirmed on new page)
@@ -1596,10 +1595,10 @@ git add -A && git commit -m "test(devtools): add integration tests for full prof
 
 ```typescript
 // src/devtools/index.ts
-export { ForeseeProfiler } from './profiler.js'
+export { AnticipatedProfiler } from './profiler.js'
 export { DevEventEmitter } from './events.js'
 export type {
-  ForeseeDevEventMap,
+  AnticipatedDevEventMap,
   PredictionFiredEvent,
   CallbackStartEvent,
   CallbackEndEvent,
@@ -1646,7 +1645,7 @@ pnpm exec tsup
 
 ```bash
 node -e "const p = require('./dist/devtools.cjs'); console.log(Object.keys(p))"
-node --input-type=module -e "import { ForeseeProfiler } from './dist/devtools.js'; console.log(typeof ForeseeProfiler)"
+node --input-type=module -e "import { AnticipatedProfiler } from './dist/devtools.js'; console.log(typeof AnticipatedProfiler)"
 ```
 
 **Step 7: Verify TypeScript types generate**
@@ -1664,7 +1663,7 @@ pnpm exec tsc --noEmit
 **Step 9: Commit**
 
 ```bash
-git add -A && git commit -m "feat(devtools): add build configuration and foresee/devtools package export"
+git add -A && git commit -m "feat(devtools): add build configuration and anticipated/devtools package export"
 ```
 
 ---
@@ -1675,7 +1674,7 @@ git add -A && git commit -m "feat(devtools): add build configuration and foresee
 - Modify: `src/devtools/profiler.ts`
 - Test: `src/devtools/profiler.test.ts` (add subscription tests)
 
-Add `subscribe()`, `getSnapshot()`, and `setEnabled()` to `ForeseeProfiler` so the React panel can use `useSyncExternalStore`.
+Add `subscribe()`, `getSnapshot()`, and `setEnabled()` to `AnticipatedProfiler` so the React panel can use `useSyncExternalStore`.
 
 **Step 1: Write the failing test**
 
@@ -1685,7 +1684,7 @@ Add to existing `src/devtools/profiler.test.ts`:
 describe('subscribable snapshot', () => {
   it('subscribe returns unsubscribe function', () => {
     const engine = new TrajectoryEngine()
-    const profiler = new ForeseeProfiler(engine)
+    const profiler = new AnticipatedProfiler(engine)
     const listener = vi.fn()
     const unsub = profiler.subscribe(listener)
     expect(typeof unsub).toBe('function')
@@ -1695,7 +1694,7 @@ describe('subscribable snapshot', () => {
 
   it('getSnapshot returns stable shape', () => {
     const engine = new TrajectoryEngine()
-    const profiler = new ForeseeProfiler(engine)
+    const profiler = new AnticipatedProfiler(engine)
     const snap = profiler.getSnapshot()
     expect(snap).toHaveProperty('report')
     expect(snap).toHaveProperty('events')
@@ -1706,7 +1705,7 @@ describe('subscribable snapshot', () => {
 
   it('notifies subscribers on new prediction event', () => {
     const engine = new TrajectoryEngine()
-    const profiler = new ForeseeProfiler(engine)
+    const profiler = new AnticipatedProfiler(engine)
     const el = document.createElement('div')
     vi.spyOn(el, 'getBoundingClientRect').mockReturnValue({
       left: 100, top: 100, right: 200, bottom: 200,
@@ -1727,7 +1726,7 @@ describe('subscribable snapshot', () => {
 
   it('setEnabled(false) stops recording events', () => {
     const engine = new TrajectoryEngine()
-    const profiler = new ForeseeProfiler(engine)
+    const profiler = new AnticipatedProfiler(engine)
     profiler.setEnabled(false)
     expect(profiler.getSnapshot().enabled).toBe(false)
     profiler.destroy()
@@ -1743,7 +1742,7 @@ pnpm exec vitest run src/devtools/profiler.test.ts
 
 **Step 3: Implement**
 
-Add to `ForeseeProfiler`:
+Add to `AnticipatedProfiler`:
 - `private readonly uiSubscribers = new Set<() => void>()`
 - `private snapshotCache: ProfilerSnapshot | null = null`
 - `subscribe(listener: () => void): () => void` — adds to Set, returns unsub
@@ -1768,30 +1767,30 @@ git add -A && git commit -m "feat(devtools): add subscribable profiler snapshot 
 ## Task 12: React Panel Shell
 
 **Files:**
-- Create: `src/devtools/react/ForeseeDevtools.tsx`
+- Create: `src/devtools/react/AnticipatedDevtools.tsx`
 - Create: `src/devtools/react/DevtoolsToggle.tsx`
 - Create: `src/devtools/react/DevtoolsPanel.tsx`
 - Create: `src/devtools/react/index.ts`
-- Test: `src/devtools/react/ForeseeDevtools.test.tsx`
+- Test: `src/devtools/react/AnticipatedDevtools.test.tsx`
 
 **Step 1: Write the failing test**
 
 ```typescript
-// src/devtools/react/ForeseeDevtools.test.tsx
+// src/devtools/react/AnticipatedDevtools.test.tsx
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
-import { ForeseeDevtools } from './ForeseeDevtools.js'
-import { ForeseeProfiler } from '../profiler.js'
+import { AnticipatedDevtools } from './AnticipatedDevtools.js'
+import { AnticipatedProfiler } from '../profiler.js'
 import { TrajectoryEngine } from '../../core/engine.js'
 
-describe('ForeseeDevtools', () => {
+describe('AnticipatedDevtools', () => {
   it('renders closed by default', () => {
     const engine = new TrajectoryEngine()
-    const profiler = new ForeseeProfiler(engine)
-    render(<ForeseeDevtools profiler={profiler} />)
+    const profiler = new AnticipatedProfiler(engine)
+    render(<AnticipatedDevtools profiler={profiler} />)
 
     // Toggle button should be visible
-    expect(screen.getByRole('button', { name: /foresee/i })).toBeDefined()
+    expect(screen.getByRole('button', { name: /anticipated/i })).toBeDefined()
     // Panel should not be visible
     expect(screen.queryByText('Predictions')).toBeNull()
 
@@ -1800,10 +1799,10 @@ describe('ForeseeDevtools', () => {
 
   it('opens panel on toggle click', () => {
     const engine = new TrajectoryEngine()
-    const profiler = new ForeseeProfiler(engine)
-    render(<ForeseeDevtools profiler={profiler} />)
+    const profiler = new AnticipatedProfiler(engine)
+    render(<AnticipatedDevtools profiler={profiler} />)
 
-    fireEvent.click(screen.getByRole('button', { name: /foresee/i }))
+    fireEvent.click(screen.getByRole('button', { name: /anticipated/i }))
 
     // Panel should now be visible with scoreboard
     expect(screen.getByText('Predictions')).toBeDefined()
@@ -1815,8 +1814,8 @@ describe('ForeseeDevtools', () => {
 
   it('renders with initialIsOpen=true', () => {
     const engine = new TrajectoryEngine()
-    const profiler = new ForeseeProfiler(engine)
-    render(<ForeseeDevtools profiler={profiler} initialIsOpen={true} />)
+    const profiler = new AnticipatedProfiler(engine)
+    render(<AnticipatedDevtools profiler={profiler} initialIsOpen={true} />)
 
     expect(screen.getByText('Predictions')).toBeDefined()
 
@@ -1825,8 +1824,8 @@ describe('ForeseeDevtools', () => {
 
   it('displays metrics from profiler snapshot', () => {
     const engine = new TrajectoryEngine()
-    const profiler = new ForeseeProfiler(engine)
-    render(<ForeseeDevtools profiler={profiler} initialIsOpen={true} />)
+    const profiler = new AnticipatedProfiler(engine)
+    render(<AnticipatedDevtools profiler={profiler} initialIsOpen={true} />)
 
     // With no data, should show zeros
     expect(screen.getByText('0')).toBeDefined()
@@ -1839,19 +1838,19 @@ describe('ForeseeDevtools', () => {
 **Step 2: Run test to verify it fails**
 
 ```bash
-pnpm exec vitest run src/devtools/react/ForeseeDevtools.test.tsx
+pnpm exec vitest run src/devtools/react/AnticipatedDevtools.test.tsx
 ```
 
 **Step 3: Implement**
 
-Create `ForeseeDevtools.tsx`:
+Create `AnticipatedDevtools.tsx`:
 - Uses `useSyncExternalStore(profiler.subscribe, profiler.getSnapshot)` for concurrent-safe rendering
 - Renders `DevtoolsToggle` (FAB button) when closed
 - Renders `DevtoolsPanel` when open
 - Accepts `dock` prop (`"bottom" | "right" | "left" | "floating"`)
 
 Create `DevtoolsToggle.tsx`:
-- Fixed-position button with "foresee" label
+- Fixed-position button with "anticipated" label
 - Calls `onToggle()` callback
 
 Create `DevtoolsPanel.tsx`:
@@ -1860,18 +1859,18 @@ Create `DevtoolsPanel.tsx`:
 - Inline styles (no external CSS dependency)
 
 Create `index.ts`:
-- `export { ForeseeDevtools } from './ForeseeDevtools.js'`
+- `export { AnticipatedDevtools } from './AnticipatedDevtools.js'`
 
 **Step 4: Run test to verify it passes**
 
 ```bash
-pnpm exec vitest run src/devtools/react/ForeseeDevtools.test.tsx
+pnpm exec vitest run src/devtools/react/AnticipatedDevtools.test.tsx
 ```
 
 **Step 5: Commit**
 
 ```bash
-git add -A && git commit -m "feat(devtools-react): add ForeseeDevtools panel shell with useSyncExternalStore"
+git add -A && git commit -m "feat(devtools-react): add AnticipatedDevtools panel shell with useSyncExternalStore"
 ```
 
 ---
@@ -1881,7 +1880,7 @@ git add -A && git commit -m "feat(devtools-react): add ForeseeDevtools panel she
 **Files:**
 - Modify: `src/devtools/react/DevtoolsPanel.tsx`
 - Create: `src/devtools/react/DevtoolsOverlay.tsx`
-- Test: `src/devtools/react/ForeseeDevtools.test.tsx` (add stream/inspector tests)
+- Test: `src/devtools/react/AnticipatedDevtools.test.tsx` (add stream/inspector tests)
 
 **Step 1: Write the failing test**
 
@@ -1891,7 +1890,7 @@ Add to existing test file:
 describe('live event stream', () => {
   it('shows prediction events as they occur', () => {
     const engine = new TrajectoryEngine()
-    const profiler = new ForeseeProfiler(engine)
+    const profiler = new AnticipatedProfiler(engine)
     const el = document.createElement('div')
     vi.spyOn(el, 'getBoundingClientRect').mockReturnValue({
       left: 100, top: 100, right: 200, bottom: 200,
@@ -1903,7 +1902,7 @@ describe('live event stream', () => {
       profile: { type: 'on_enter' },
     })
 
-    render(<ForeseeDevtools profiler={profiler} initialIsOpen={true} />)
+    render(<AnticipatedDevtools profiler={profiler} initialIsOpen={true} />)
     engine.trigger('settings')
 
     // Event should appear in the stream
@@ -1914,7 +1913,7 @@ describe('live event stream', () => {
 
   it('shows inspector when event row is clicked', () => {
     const engine = new TrajectoryEngine()
-    const profiler = new ForeseeProfiler(engine)
+    const profiler = new AnticipatedProfiler(engine)
     const el = document.createElement('div')
     vi.spyOn(el, 'getBoundingClientRect').mockReturnValue({
       left: 100, top: 100, right: 200, bottom: 200,
@@ -1926,7 +1925,7 @@ describe('live event stream', () => {
       profile: { type: 'on_enter' },
     })
 
-    render(<ForeseeDevtools profiler={profiler} initialIsOpen={true} />)
+    render(<AnticipatedDevtools profiler={profiler} initialIsOpen={true} />)
     engine.trigger('btn')
 
     // Click the event row
@@ -1943,7 +1942,7 @@ describe('live event stream', () => {
 **Step 2: Run test to verify it fails**
 
 ```bash
-pnpm exec vitest run src/devtools/react/ForeseeDevtools.test.tsx
+pnpm exec vitest run src/devtools/react/AnticipatedDevtools.test.tsx
 ```
 
 **Step 3: Implement**
@@ -1972,7 +1971,7 @@ git add -A && git commit -m "feat(devtools-react): add live event list and inspe
 
 **Files:**
 - Modify: `src/devtools/react/DevtoolsPanel.tsx`
-- Test: `src/devtools/react/ForeseeDevtools.test.tsx` (add control tests)
+- Test: `src/devtools/react/AnticipatedDevtools.test.tsx` (add control tests)
 
 **Step 1: Write the failing test**
 
@@ -1982,8 +1981,8 @@ Add to existing test file:
 describe('devtools controls', () => {
   it('pause button stops new events', () => {
     const engine = new TrajectoryEngine()
-    const profiler = new ForeseeProfiler(engine)
-    render(<ForeseeDevtools profiler={profiler} initialIsOpen={true} />)
+    const profiler = new AnticipatedProfiler(engine)
+    render(<AnticipatedDevtools profiler={profiler} initialIsOpen={true} />)
 
     fireEvent.click(screen.getByRole('button', { name: /pause/i }))
 
@@ -1994,7 +1993,7 @@ describe('devtools controls', () => {
 
   it('reset button clears data', () => {
     const engine = new TrajectoryEngine()
-    const profiler = new ForeseeProfiler(engine)
+    const profiler = new AnticipatedProfiler(engine)
     const el = document.createElement('div')
     vi.spyOn(el, 'getBoundingClientRect').mockReturnValue({
       left: 100, top: 100, right: 200, bottom: 200,
@@ -2007,7 +2006,7 @@ describe('devtools controls', () => {
     })
     engine.trigger('btn')
 
-    render(<ForeseeDevtools profiler={profiler} initialIsOpen={true} />)
+    render(<AnticipatedDevtools profiler={profiler} initialIsOpen={true} />)
     fireEvent.click(screen.getByRole('button', { name: /reset/i }))
 
     const report = profiler.getReport()
@@ -2018,11 +2017,11 @@ describe('devtools controls', () => {
 
   it('copy button writes report JSON to clipboard', async () => {
     const engine = new TrajectoryEngine()
-    const profiler = new ForeseeProfiler(engine)
+    const profiler = new AnticipatedProfiler(engine)
     const writeText = vi.fn().mockResolvedValue(undefined)
     Object.assign(navigator, { clipboard: { writeText } })
 
-    render(<ForeseeDevtools profiler={profiler} initialIsOpen={true} />)
+    render(<AnticipatedDevtools profiler={profiler} initialIsOpen={true} />)
     fireEvent.click(screen.getByRole('button', { name: /copy/i }))
 
     expect(writeText).toHaveBeenCalledOnce()
@@ -2037,7 +2036,7 @@ describe('devtools controls', () => {
 **Step 2: Run test to verify it fails**
 
 ```bash
-pnpm exec vitest run src/devtools/react/ForeseeDevtools.test.tsx
+pnpm exec vitest run src/devtools/react/AnticipatedDevtools.test.tsx
 ```
 
 **Step 3: Implement**
@@ -2096,7 +2095,7 @@ pnpm exec tsup
 
 ```bash
 node -e "const p = require('./dist/devtools-react.cjs'); console.log(Object.keys(p))"
-node --input-type=module -e "import { ForeseeDevtools } from './dist/devtools-react.js'; console.log(typeof ForeseeDevtools)"
+node --input-type=module -e "import { AnticipatedDevtools } from './dist/devtools-react.js'; console.log(typeof AnticipatedDevtools)"
 ```
 
 **Step 6: Verify TypeScript types generate**
@@ -2114,7 +2113,7 @@ pnpm exec tsc --noEmit
 **Step 8: Commit**
 
 ```bash
-git add -A && git commit -m "feat(devtools-react): export foresee/devtools/react entrypoint"
+git add -A && git commit -m "feat(devtools-react): export anticipated/devtools/react entrypoint"
 ```
 
 ---
@@ -2123,7 +2122,7 @@ git add -A && git commit -m "feat(devtools-react): export foresee/devtools/react
 
 ```mermaid
 gantt
-    title foresee/devtools Implementation Timeline
+    title anticipated/devtools Implementation Timeline
     dateFormat  HH:mm
     axisFormat %H:%M
 
@@ -2143,7 +2142,7 @@ gantt
     Task 7 - Navigation Correlation :t7, after t3, 20m
 
     section Profiler
-    Task 8 - ForeseeProfiler       :t8, after t7, 25m
+    Task 8 - AnticipatedProfiler   :t8, after t7, 25m
 
     section Verification
     Task 9 - Integration Tests     :t9, after t8, 20m

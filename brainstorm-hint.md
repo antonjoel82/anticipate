@@ -1,8 +1,8 @@
-# useTrajectory — Brainstorm Hint
+# useAnticipated — Brainstorm Hint
 
 ## What We're Building
 
-A React hook (`useTrajectory` or similar) in TypeScript that predicts cursor intent using ray-AABB intersection (the slab method from `geofence.html`). You register DOM elements, and the hook continuously computes trajectory snapshots for each one based on mouse movement.
+A React hook (`useAnticipated` or similar) in TypeScript that predicts cursor intent using ray-AABB intersection (the slab method from `geofence.html`). You register DOM elements, and the hook continuously computes trajectory snapshots for each one based on mouse movement.
 
 ## Core Mechanics
 

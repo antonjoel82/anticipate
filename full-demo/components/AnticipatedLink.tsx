@@ -1,11 +1,11 @@
 import { type CSSProperties, type ReactNode } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import type { TrajectorySnapshot } from 'anticipate/core'
+import type { TrajectorySnapshot } from 'anticipated/core'
 import { useSharedTrajectory } from '../context/TrajectoryContext.js'
 import { getSettings, useDemoStore, incrementPreloadCount } from '../lib/demoStore.js'
 import { ConfidenceBadge } from './ConfidenceBadge.js'
 
-type AnticipateLinkProps = {
+type AnticipatedLinkProps = {
   to: string
   preload: () => boolean
   children: ReactNode
@@ -23,7 +23,7 @@ function getGlowStyle(snapshot: TrajectorySnapshot | undefined, isShowingPredict
   }
 }
 
-export function AnticipateLink({ to, preload: preloadFn, children, icon, className = '' }: AnticipateLinkProps) {
+export function AnticipatedLink({ to, preload: preloadFn, children, icon, className = '' }: AnticipatedLinkProps) {
   const { register, useSnapshot } = useSharedTrajectory()
   const settings = useDemoStore()
   const location = useLocation()
@@ -32,7 +32,7 @@ export function AnticipateLink({ to, preload: preloadFn, children, icon, classNa
 
   const ref = register(linkId, {
     whenApproaching: () => {
-      if (!getSettings().isAnticipateEnabled) return
+      if (!getSettings().isAnticipatedEnabled) return
       if (preloadFn()) incrementPreloadCount()
     },
     tolerance: 30,
@@ -48,8 +48,8 @@ export function AnticipateLink({ to, preload: preloadFn, children, icon, classNa
       ref={ref as React.RefCallback<HTMLAnchorElement>}
       className={`nav-link ${isActive ? 'active' : ''} ${isGlowing ? 'glowing' : ''} ${className}`}
       style={glowStyle}
-      data-anticipate-id={linkId}
-      data-anticipate-tolerance="30"
+      data-anticipated-id={linkId}
+      data-anticipated-tolerance="30"
     >
       {icon && <span className="nav-icon">{icon}</span>}
       <span className="nav-label">{children}</span>

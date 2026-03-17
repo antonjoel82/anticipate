@@ -1,6 +1,6 @@
-# useTrajectory Design Document
+# useAnticipated Design Document
 
-> **Package**: `foresee`
+> **Package**: `anticipated`
 > **Date**: 2026-03-15
 > **Status**: Approved
 > **Approach**: B — Better Predictions, React-First
@@ -13,7 +13,7 @@ A standalone TypeScript library that predicts cursor intent using finite-segment
 
 **ForesightJS** (`js.foresight`, 1,505 stars) is the closest existing library. Our audit identified critical weaknesses we address:
 
-| ForesightJS Weakness | Foresee Improvement |
+| ForesightJS Weakness | Anticipated Improvement |
 |---|---|
 | No cleanup on unmount — memory leaks | Proper `useEffect` cleanup via ref callbacks |
 | Dependency array trap — infinite re-registrations | Stable string ID registration, no object deps |
@@ -36,8 +36,8 @@ Academic basis: Diaz et al. (SIGIR 2016) on optimal prediction windows, Su et al
 | Update strategy | `requestAnimationFrame` | Syncs with browser paint cycle, ~60fps cap, no wasted computation |
 | Ray model | Finite segment (current -> predicted point) | Fewer false positives than infinite ray; validated by ForesightJS approach |
 | Return shape | `{ register, getSnapshot, useSnapshot }` | `getSnapshot(id)` for non-reactive reads, `useSnapshot(id)` for per-element reactive subscriptions. Avoids full-map re-renders. |
-| Instance isolation | Independent per `useTrajectory()` call | Simple mental model, no shared singleton, no cross-component coupling |
-| Core/React separation | `foresee/core` + `foresee/react` entrypoints | Framework-agnostic engine; trivial to wrap for Vue/Svelte/Solid |
+| Instance isolation | Independent per `useAnticipated()` call | Simple mental model, no shared singleton, no cross-component coupling |
+| Core/React separation | `anticipated/core` + `anticipated/react` entrypoints | Framework-agnostic engine; trivial to wrap for Vue/Svelte/Solid |
 | Type system | Hand-rolled validation with TypeScript types | Zero-dependency validation. No Zod (13KB) — keeps library under 5KB. Validators are simple guard functions with descriptive errors. |
 | Detection area param | `tolerance` (primary), `hitSlop` (alias) | Self-documenting name; hitSlop retained for React Native familiarity |
 | Distance calculation | Nearest edge of AABB | Standard approach, returns 0 when cursor is inside element |
@@ -52,7 +52,7 @@ Academic basis: Diaz et al. (SIGIR 2016) on optimal prediction windows, Su et al
 ## Package Architecture
 
 ```
-foresee/
+anticipated/
   src/
     core/                    # Framework-agnostic engine
       engine.ts              # TrajectoryEngine class
@@ -65,7 +65,7 @@ foresee/
       buffer.ts              # Circular buffer
       index.ts               # Public exports
     react/                   # React-specific wrapper
-      useTrajectory.ts       # Hook (thin wrapper over engine)
+      useAnticipated.ts      # Hook (thin wrapper over engine)
       index.ts               # Public exports
     index.ts                 # Re-export everything
   tsconfig.json
@@ -78,11 +78,11 @@ foresee/
 ### React Hook
 
 ```typescript
-import { useTrajectory } from 'foresee/react'
+import { useAnticipated } from 'anticipated/react'
 
 // Power-user API (full control)
 function NavButton({ href, label }: Props) {
-  const { register, useSnapshot } = useTrajectory({
+  const { register, useSnapshot } = useAnticipated({
     predictionWindow: 150,
   })
 
@@ -109,7 +109,7 @@ function NavButton({ href, label }: Props) {
 
 // Convenience API (80% use case)
 function SimpleLink({ href, label }: Props) {
-  const { register } = useTrajectory()
+  const { register } = useAnticipated()
 
   const ref = register<HTMLAnchorElement>('link', {
     whenApproaching: () => prefetch(href),
@@ -123,7 +123,7 @@ function SimpleLink({ href, label }: Props) {
 ### Hook Signature
 
 ```typescript
-function useTrajectory(options?: EngineOptions): {
+function useAnticipated(options?: EngineOptions): {
   register: <T extends HTMLElement>(
     id: string,
     config: ElementConfig
@@ -140,7 +140,7 @@ For consumers who just want "do X when cursor approaches element":
 
 ```typescript
 function NavLink({ href, label }: Props) {
-  const { register } = useTrajectory()
+  const { register } = useAnticipated()
 
   const ref = register<HTMLAnchorElement>('nav-home', {
     whenApproaching: () => prefetch(href),   // Fires on_enter when isIntersecting && confidence > 0.5
@@ -169,7 +169,7 @@ Both APIs coexist — use `whenApproaching` for the common case, full `triggerOn
 ### Core Engine (Framework-Agnostic)
 
 ```typescript
-import { TrajectoryEngine } from 'foresee/core'
+import { TrajectoryEngine } from 'anticipated/core'
 
 const engine = new TrajectoryEngine({ predictionWindow: 150 })
 engine.register('btn', buttonElement, config)
@@ -485,7 +485,7 @@ export const DEFAULT_CONFIDENCE_THRESHOLD = 0.5
 The hook is a thin wrapper over `TrajectoryEngine`:
 
 ```typescript
-function useTrajectory(options?: EngineOptions) {
+function useAnticipated(options?: EngineOptions) {
   const engineRef = useRef<TrajectoryEngine | null>(null)
   const configsRef = useRef<Map<string, ElementConfig>>(new Map())
 
@@ -554,7 +554,7 @@ Key properties:
 | Test runner | `vitest` | Fast, native ESM, TypeScript-first, compatible with happy-dom. |
 | Test environment | `happy-dom` | Lighter than jsdom (~2x faster), sufficient for DOM mocking. |
 | TypeScript | `strict: true` | Non-negotiable for a library. |
-| Package exports | Conditional exports (`foresee/core`, `foresee/react`) | Proper subpath exports via `package.json` `exports` field. |
+| Package exports | Conditional exports (`anticipated/core`, `anticipated/react`) | Proper subpath exports via `package.json` `exports` field. |
 
 ## Testing Strategy
 

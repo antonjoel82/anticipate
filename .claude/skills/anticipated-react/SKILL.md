@@ -1,19 +1,19 @@
 ---
-name: foresee-react
-description: React hook for cursor trajectory prediction. Use when integrating useTrajectory into React components — registering elements via ref callbacks, subscribing to trajectory snapshots, building predictive UI like prefetch-on-approach or confidence-driven styling.
+name: anticipated-react
+description: React hook for cursor trajectory prediction. Use when integrating useAnticipated into React components — registering elements via ref callbacks, subscribing to trajectory snapshots, building predictive UI like prefetch-on-approach or confidence-driven styling.
 ---
 
-# Foresee React Hook
+# Anticipated React Hook
 
-`useTrajectory` — React wrapper for the foresee trajectory prediction engine. Import from `foresee/react`.
+`useAnticipated` — React wrapper for the anticipated trajectory prediction engine. Import from `anticipated/react`.
 
 ## Quick Start
 
 ```tsx
-import { useTrajectory } from 'foresee/react'
+import { useAnticipated } from 'anticipated/react'
 
 function PrefetchLink({ href, children }: { href: string; children: React.ReactNode }) {
-  const { register, useSnapshot } = useTrajectory()
+  const { register, useSnapshot } = useAnticipated()
 
   const ref = register('link', {
     whenApproaching: () => prefetch(href),
@@ -33,7 +33,7 @@ function PrefetchLink({ href, children }: { href: string; children: React.ReactN
 `register(id, config)` returns a stable `RefCallback<HTMLElement>`. Attach directly to JSX:
 
 ```tsx
-const { register } = useTrajectory()
+const { register } = useAnticipated()
 
 const ref = register('submit-btn', {
   whenApproaching: () => prevalidateForm(),
@@ -48,7 +48,7 @@ Ref callbacks are cached per `id` — safe across re-renders without churn.
 ### Reactive Snapshots with useSnapshot
 
 ```tsx
-const { register, useSnapshot } = useTrajectory()
+const { register, useSnapshot } = useAnticipated()
 const ref = register('card', { whenApproaching: () => {}, tolerance: 15 })
 const snap = useSnapshot('card')
 
@@ -71,11 +71,11 @@ return (
 
 ### Multiple Elements from One Hook
 
-Call `useTrajectory()` once, register many elements:
+Call `useAnticipated()` once, register many elements:
 
 ```tsx
 function Nav() {
-  const { register, useSnapshot } = useTrajectory({ predictionWindow: 150 })
+  const { register, useSnapshot } = useAnticipated({ predictionWindow: 150 })
 
   return (
     <nav>
@@ -110,7 +110,7 @@ const ref = register('checkout', {
 ### Imperative Trigger
 
 ```tsx
-const { trigger } = useTrajectory()
+const { trigger } = useAnticipated()
 
 const handleKeyPress = (e: KeyboardEvent) => {
   if (e.key === 'Enter') trigger('submit-btn')
@@ -119,8 +119,8 @@ const handleKeyPress = (e: KeyboardEvent) => {
 
 ## Key Rules
 
-1. Call `useTrajectory()` once per component tree (or per engine instance).
-2. Pass `register` and `useSnapshot` down as props — do not call `useTrajectory()` in child components (creates separate engines).
+1. Call `useAnticipated()` once per component tree (or per engine instance).
+2. Pass `register` and `useSnapshot` down as props — do not call `useAnticipated()` in child components (creates separate engines).
 3. `useSnapshot(id)` is a hook — call unconditionally at component top level.
 4. `register` returns stable ref callbacks. Do not wrap in `useCallback`.
 5. Engine auto-connects on mount and auto-destroys on unmount.
@@ -128,7 +128,7 @@ const handleKeyPress = (e: KeyboardEvent) => {
 ## Hook Return Shape
 
 ```ts
-type UseTrajectoryReturn = {
+type UseAnticipatedReturn = {
   register: (id: string, config: RegisterConfig) => RefCallback<HTMLElement>
   trigger: (id: string, options?: TriggerOptions) => void
   getSnapshot: (id: string) => TrajectorySnapshot | undefined  // non-reactive

@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from 'react'
 
 export type DemoSettings = {
-  isAnticipateEnabled: boolean
+  isAnticipatedEnabled: boolean
   latencyMs: number
   isShowingPredictions: boolean
   isShowingRadii: boolean
@@ -37,7 +37,7 @@ function readSettingsFromURL(): Partial<DemoSettings> {
   if (typeof window === 'undefined') return {}
   const params: URLSearchParams = new URLSearchParams(window.location.search)
   const patch: Partial<DemoSettings> = {}
-  if (params.has('anticipate')) patch.isAnticipateEnabled = parseBool(params.get('anticipate'), true)
+  if (params.has('anticipated')) patch.isAnticipatedEnabled = parseBool(params.get('anticipated'), true)
   if (params.has('latency')) patch.latencyMs = parseNum(params.get('latency'), DEFAULT_LATENCY_MS, 50, 3000)
   if (params.has('predictions')) patch.isShowingPredictions = parseBool(params.get('predictions'), true)
   if (params.has('radii')) patch.isShowingRadii = parseBool(params.get('radii'), false)
@@ -57,7 +57,7 @@ function writeSettingsToURL(): void {
   if (typeof window === 'undefined') return
   const s: DemoSettings = settings
   const params = new URLSearchParams(window.location.search)
-  params.set('anticipate', s.isAnticipateEnabled ? '1' : '0')
+  params.set('anticipated', s.isAnticipatedEnabled ? '1' : '0')
   params.set('latency', String(s.latencyMs))
   params.set('predictions', s.isShowingPredictions ? '1' : '0')
   params.set('radii', s.isShowingRadii ? '1' : '0')
@@ -75,7 +75,7 @@ function writeSettingsToURL(): void {
 }
 
 let settings: DemoSettings = {
-  isAnticipateEnabled: true,
+  isAnticipatedEnabled: true,
   latencyMs: DEFAULT_LATENCY_MS,
   isShowingPredictions: true,
   isShowingRadii: false,

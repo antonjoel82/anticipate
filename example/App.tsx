@@ -1,6 +1,6 @@
 import { type CSSProperties } from 'react'
-import { useTrajectory } from 'anticipate/react'
-import type { TrajectorySnapshot, RegisterConfig } from 'anticipate/core'
+import { useAnticipated } from 'anticipated/react'
+import type { TrajectorySnapshot, RegisterConfig } from 'anticipated/core'
 
 const CONFIDENCE_VISIBLE_THRESHOLD = 0.5
 
@@ -24,8 +24,8 @@ function confidenceToGreenGlow(snapshot: TrajectorySnapshot | undefined): CSSPro
 type TrackedElementProps = {
   id: string
   label: string
-  register: ReturnType<typeof useTrajectory>['register']
-  useSnapshot: ReturnType<typeof useTrajectory>['useSnapshot']
+  register: ReturnType<typeof useAnticipated>['register']
+  useSnapshot: ReturnType<typeof useAnticipated>['useSnapshot']
   config: RegisterConfig
   as?: 'a' | 'button'
   className?: string
@@ -77,7 +77,7 @@ const APPROACHING_CONFIG: RegisterConfig = {
 }
 
 export function App() {
-  const { register, useSnapshot } = useTrajectory({
+  const { register, useSnapshot } = useAnticipated({
     predictionWindow: 150,
     smoothingFactor: 0.3,
   })
@@ -87,7 +87,7 @@ export function App() {
       <style>{STYLES}</style>
       <div className="app-layout">
         <nav className="sidebar">
-          <div className="sidebar-brand">anticipate</div>
+          <div className="sidebar-brand">anticipated</div>
           <div className="sidebar-section-label">Navigation</div>
           <div className="sidebar-nav">
             {NAV_ITEMS.map((item) => (

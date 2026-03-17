@@ -1,13 +1,13 @@
-# foresee/devtools — Prediction Value Profiler Design
+# anticipated/devtools — Prediction Value Profiler Design
 
-> **Package**: `foresee`
+> **Package**: `anticipated`
 > **Date**: 2026-03-15
 > **Status**: Draft
 > **Approach**: A — Event Bus + Passive Correlation
 
 ## Overview
 
-A developer-facing profiler that measures whether foresee's cursor trajectory predictions actually delivered measurable UX value. Ships as a `foresee/devtools` entrypoint — opt-in, tree-shakeable, zero overhead when not imported.
+A developer-facing profiler that measures whether anticipated's cursor trajectory predictions actually delivered measurable UX value. Ships as a `anticipated/devtools` entrypoint — opt-in, tree-shakeable, zero overhead when not imported.
 
 The core question it answers: *"Did the user navigate to what we predicted? Was the prefetch done in time? How much total time was saved — including across a multi-step flow?"*
 
@@ -20,16 +20,16 @@ The core question it answers: *"Did the user navigate to what we predicted? Was 
 | **React DevTools Profiler** | Component render timing via `onRender` callback. Ring buffer per commit. | Component-scoped. No concept of navigation intent or prediction accuracy. |
 | **Chrome Performance panel** | `performance.mark/measure` appear as spans in timeline. | Marks cleared on navigation — cannot measure multi-step flows. No aggregate metrics. |
 
-**What's novel here**: Cross-navigation prediction correlation. Nobody has built a tool that says "across this 4-step user journey, foresee's predictions saved 1.2s total and had 85% precision."
+**What's novel here**: Cross-navigation prediction correlation. Nobody has built a tool that says "across this 4-step user journey, anticipated's predictions saved 1.2s total and had 85% precision."
 
 ## Decisions
 
 | Question | Decision | Rationale |
 |---|---|---|
 | What to measure | Prediction value (not engine overhead) | Engine overhead is covered by Chrome DevTools. Prediction value is novel and unsolved. |
-| Audience | Library consumers (developers using foresee) | The strongest thing foresee can do is prove its own value to adopters. |
-| Shipping format | `foresee/devtools` + `foresee/devtools/react` entrypoints | Profiler backend is React-free. Interactive panel ships separately. Both match existing entrypoint pattern. |
-| React DevTools panel | TanStack-style `<ForeseeDevtools />` component | Interactive panel for dev mode — scoreboard, live events, inspector, flow viewer. Ships as separate entrypoint, tree-shaken out when not imported. |
+| Audience | Library consumers (developers using anticipated) | The strongest thing anticipated can do is prove its own value to adopters. |
+| Shipping format | `anticipated/devtools` + `anticipated/devtools/react` entrypoints | Profiler backend is React-free. Interactive panel ships separately. Both match existing entrypoint pattern. |
+| React DevTools panel | TanStack-style `<AnticipatedDevtools />` component | Interactive panel for dev mode — scoreboard, live events, inspector, flow viewer. Ships as separate entrypoint, tree-shaken out when not imported. |
 | Event system | Typed emitter mixin on TrajectoryEngine | Zero cost when unused. Same pattern as existing `subscribe()`. |
 | Click correlation | `resolveIdFromEventTarget()` via WeakMap + DOM ancestor walk | Maps click targets back to registered elementIds without exposing internal maps or requiring data attributes. |
 | Navigation correlation | History API instrumentation + PendingNavigationRecord + sessionStorage | SPA: wrap pushState/replaceState + popstate. MPA: persist pending navigations, match on next page load. |
@@ -41,11 +41,11 @@ The core question it answers: *"Did the user navigate to what we predicted? Was 
 
 ## The Core Problem
 
-foresee fires prefetch callbacks when it predicts the cursor is heading toward an element. But there's no way to measure whether those predictions actually helped:
+anticipated fires prefetch callbacks when it predicts the cursor is heading toward an element. But there's no way to measure whether those predictions actually helped:
 
 ```
 predict → prefetch starts → prefetch completes → user clicks → navigation starts → page loads
-         ↑ foresee controls this                  ↑ app controls this — foresee can only observe
+         ↑ anticipated controls this                  ↑ app controls this — anticipated can only observe
 ```
 
 The profiler bridges this gap by correlating prediction events against actual user actions.
@@ -57,7 +57,7 @@ Add typed event emission to `TrajectoryEngine`. Minimal changes — gated behind
 ### Event Types
 
 ```typescript
-interface ForeseeEventMap {
+interface AnticipatedDevEventMap {
   'prediction:fired': {
     elementId: string
     timestamp: number          // performance.now()
@@ -144,9 +144,9 @@ The `prediction:fired` event is emitted in the `update()` loop, right before `sa
 
 ```typescript
 // Added to TrajectoryEngine
-private readonly devListeners = new Map<keyof ForeseeEventMap, Set<(data: any) => void>>()
+private readonly devListeners = new Map<keyof AnticipatedDevEventMap, Set<(data: any) => void>>()
 
-onDev<K extends keyof ForeseeEventMap>(event: K, listener: (data: ForeseeEventMap[K]) => void): () => void {
+onDev<K extends keyof AnticipatedDevEventMap>(event: K, listener: (data: AnticipatedDevEventMap[K]) => void): () => void {
   let set = this.devListeners.get(event)
   if (!set) {
     set = new Set()
@@ -159,7 +159,7 @@ onDev<K extends keyof ForeseeEventMap>(event: K, listener: (data: ForeseeEventMa
   }
 }
 
-private emitDevEvent<K extends keyof ForeseeEventMap>(event: K, data: ForeseeEventMap[K]): void {
+private emitDevEvent<K extends keyof AnticipatedDevEventMap>(event: K, data: AnticipatedDevEventMap[K]): void {
   const listeners = this.devListeners.get(event)
   if (!listeners) return
   for (const listener of listeners) {
@@ -168,18 +168,18 @@ private emitDevEvent<K extends keyof ForeseeEventMap>(event: K, data: ForeseeEve
 }
 ```
 
-## ForeseeProfiler Class
+## AnticipatedProfiler Class
 
-The consumer-facing API. Imported from `foresee/devtools`.
+The consumer-facing API. Imported from `anticipated/devtools`.
 
 ### Usage
 
 ```typescript
-import { ForeseeProfiler } from 'foresee/devtools'
-import { TrajectoryEngine } from 'foresee/core'
+import { AnticipatedProfiler } from 'anticipated/devtools'
+import { TrajectoryEngine } from 'anticipated/core'
 
 const engine = new TrajectoryEngine()
-const profiler = new ForeseeProfiler(engine, {
+const profiler = new AnticipatedProfiler(engine, {
   confirmationWindowMs: 2000,        // how long after prediction to wait for navigation
   persistAcrossNavigations: true,    // use sessionStorage for cross-page tracking
   maxEventsStored: 500,              // ring buffer size
@@ -255,7 +255,7 @@ Listen for `click` events on registered elements. If a prediction fired for elem
 //   3. If not found → this was a navigation without prediction (FN)
 ```
 
-This is automatic and covers the 80% case (user clicks a link/button that foresee predicted).
+This is automatic and covers the 80% case (user clicks a link/button that anticipated predicted).
 
 ### 2. Navigation Observation (Automatic)
 
@@ -299,7 +299,7 @@ A prediction that isn't confirmed within `confirmationWindowMs` by any strategy 
 
 ```typescript
 // Storage key
-const STORAGE_KEY = 'foresee:profiler'
+const STORAGE_KEY = 'anticipated:profiler'
 
 // Stored shape
 type PersistedState = {
@@ -346,7 +346,7 @@ Example:
 ```
 User journey: Home → Products → Product Detail → Cart → Checkout
 
-foresee predictions:
+anticipated predictions:
   Home:          predicted "Products" ✓ (TP, lead: 340ms)
   Products:      predicted "Product Detail" ✓ (TP, lead: 210ms)
   Product Detail: predicted "Cart" ✓ (TP, lead: 450ms)
@@ -354,7 +354,7 @@ foresee predictions:
 
 Flow report:
   steps: 4, confirmed: 4, precision: 1.0, totalLeadTime: 1180ms
-  → "foresee saved 1.18 seconds across this 4-step checkout flow"
+  → "anticipated saved 1.18 seconds across this 4-step checkout flow"
 ```
 
 ## Package Architecture
@@ -362,15 +362,15 @@ Flow report:
 ```
 src/
   devtools/
-    profiler.ts              # ForeseeProfiler class — main consumer API
-    events.ts                # ForeseeEventMap types + emitter mixin
+    profiler.ts              # AnticipatedProfiler class — main consumer API
+    events.ts                # AnticipatedDevEventMap types + emitter mixin
     session-store.ts         # sessionStorage ring buffer read/write
     correlation.ts           # Click / navigation / manual confirmation logic
     metrics.ts               # Precision, recall, lead time, flow computation
     types.ts                 # ProfilerReport, FlowReport, ProfilerOptions, etc.
     index.ts                 # Public exports
     react/
-      ForeseeDevtools.tsx    # Public panel component (TanStack-style)
+      AnticipatedDevtools.tsx    # Public panel component (TanStack-style)
       DevtoolsPanel.tsx      # Docked panel with tabs (scoreboard, events, flows)
       DevtoolsToggle.tsx     # Fixed-position FAB to open/close
       DevtoolsOverlay.tsx    # Element highlight overlay
@@ -398,26 +398,26 @@ New entries in `tsup.config.ts`:
 entry: ['src/index.ts', 'src/core/index.ts', 'src/react/index.ts', 'src/devtools/index.ts', 'src/devtools/react/index.ts']
 ```
 
-## React DevTools Panel (`<ForeseeDevtools />`)
+## React DevTools Panel (`<AnticipatedDevtools />`)
 
-Inspired by TanStack Query DevTools. Ships as `foresee/devtools/react` — a separate entrypoint that depends on React (peer dep). The profiler backend (`foresee/devtools`) remains React-free.
+Inspired by TanStack Query DevTools. Ships as `anticipated/devtools/react` — a separate entrypoint that depends on React (peer dep). The profiler backend (`anticipated/devtools`) remains React-free.
 
 ### Mount Pattern
 
 ```tsx
-import { ForeseeDevtools } from 'foresee/devtools/react'
+import { AnticipatedDevtools } from 'anticipated/devtools/react'
 
 function App() {
   return (
     <>
       <MyApp />
-      {import.meta.env.DEV && <ForeseeDevtools profiler={profiler} />}
+      {import.meta.env.DEV && <AnticipatedDevtools profiler={profiler} />}
     </>
   )
 }
 ```
 
-Dev-only by conditional rendering. Because `foresee/devtools/react` is a separate entrypoint, production bundles that never import it won't include it. No magic no-op needed.
+Dev-only by conditional rendering. Because `anticipated/devtools/react` is a separate entrypoint, production bundles that never import it won't include it. No magic no-op needed.
 
 ### What It Shows
 
@@ -442,7 +442,7 @@ Dev-only by conditional rendering. Because `foresee/devtools/react` is a separat
 The panel is a thin subscriber to profiler state:
 
 ```typescript
-// Inside ForeseeDevtools
+// Inside AnticipatedDevtools
 const snapshot = useSyncExternalStore(
   profiler.subscribe,
   profiler.getSnapshot
@@ -514,16 +514,16 @@ profiler.notifyNavigation('/unexpected-page')
 
 ## Public API Summary
 
-### From `foresee/core` (engine changes)
+### From `anticipated/core` (engine changes)
 
 ```typescript
 class TrajectoryEngine {
   // ... existing methods ...
 
   // NEW: Dev event subscription (zero overhead when no listeners)
-  onDev<K extends keyof ForeseeEventMap>(
+  onDev<K extends keyof AnticipatedDevEventMap>(
     event: K,
-    listener: (data: ForeseeEventMap[K]) => void
+    listener: (data: AnticipatedDevEventMap[K]) => void
   ): () => void
 
   // NEW: Map click target to registered element ID (for profiler click correlation)
@@ -534,10 +534,10 @@ class TrajectoryEngine {
 }
 ```
 
-### From `foresee/devtools`
+### From `anticipated/devtools`
 
 ```typescript
-class ForeseeProfiler {
+class AnticipatedProfiler {
   constructor(engine: TrajectoryEngine, options?: ProfilerOptions)
 
   // Reports
@@ -561,12 +561,12 @@ class ForeseeProfiler {
 }
 ```
 
-### From `foresee/devtools/react`
+### From `anticipated/devtools/react`
 
 ```typescript
 // TanStack DevTools-style interactive panel
-function ForeseeDevtools(props: {
-  profiler: ForeseeProfiler
+function AnticipatedDevtools(props: {
+  profiler: AnticipatedProfiler
   initialIsOpen?: boolean       // default: false
   dock?: 'bottom' | 'right' | 'left' | 'floating'  // default: 'bottom'
 }): JSX.Element
@@ -591,7 +591,7 @@ function ForeseeDevtools(props: {
 
 | Component | Role |
 |---|---|
-| `ForeseeDevtools` | Public. Owns open/dock state. Renders toggle + panel. |
+| `AnticipatedDevtools` | Public. Owns open/dock state. Renders toggle + panel. |
 | `DevtoolsToggle` | Internal. Fixed-position FAB button. |
 | `DevtoolsPanel` | Internal. Docked container with tabs (scoreboard, events, flows). |
 | `DevtoolsOverlay` | Internal. Absolute-positioned highlight overlay on tracked elements. |
@@ -627,6 +627,6 @@ function ForeseeDevtools(props: {
 ```typescript
 export const DEFAULT_CONFIRMATION_WINDOW_MS = 2000
 export const DEFAULT_MAX_EVENTS_STORED = 500
-export const SESSION_STORAGE_KEY = 'foresee:profiler'
+export const SESSION_STORAGE_KEY = 'anticipated:profiler'
 export const FLOW_BREAK_TIMEOUT_MS = 30000   // 30s without activity breaks a flow
 ```
