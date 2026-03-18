@@ -1,6 +1,6 @@
 import { createContext, useContext, type ReactNode } from 'react'
 import { useAnticipated } from 'anticipated/react'
-import type { RegisterConfig, TrajectorySnapshot, TriggerOptions } from 'anticipated/core'
+import type { RegisterConfig, TrajectorySnapshot, TriggerOptions, NormalizedZone } from 'anticipated/core'
 import type { RefCallback } from 'react'
 import { useDemoStore, type DemoSettings } from '../lib/demoStore.js'
 
@@ -8,6 +8,7 @@ type TrajectoryContextType = {
   register: (id: string, config: RegisterConfig) => RefCallback<HTMLElement>
   useSnapshot: (id: string) => TrajectorySnapshot | undefined
   getSnapshot: (id: string) => TrajectorySnapshot | undefined
+  getElementZones: (id: string) => ReadonlyArray<NormalizedZone> | undefined
   trigger: (id: string, options?: TriggerOptions) => void
 }
 

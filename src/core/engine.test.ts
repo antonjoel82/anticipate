@@ -1,6 +1,6 @@
-import { describe, it, expect, vi, afterEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { TrajectoryEngine } from './engine.js'
-import type { ElementConfig, TriggerProfile } from './types.js'
+import type { ElementConfig } from './types.js'
 
 function makeConfig(overrides?: Partial<ElementConfig>): ElementConfig {
   return {
@@ -208,6 +208,255 @@ function mockRect(el: HTMLElement): void {
     width: 100, height: 100, x: 0, y: 0, toJSON: () => {},
   })
 }
+
+function mockRectAt(
+  el: HTMLElement,
+  rect: { left: number; top: number; width: number; height: number },
+): void {
+  vi.spyOn(el, 'getBoundingClientRect').mockReturnValue({
+    left: rect.left,
+    top: rect.top,
+    right: rect.left + rect.width,
+    bottom: rect.top + rect.height,
+    width: rect.width,
+    height: rect.height,
+    x: rect.left,
+    y: rect.top,
+    toJSON: () => {},
+  })
+}
+
+function makePointerEvent(x: number, y: number, timeStamp: number): PointerEvent {
+  const event = new PointerEvent('pointermove', {
+    clientX: x,
+    clientY: y,
+    bubbles: true,
+  })
+  Object.defineProperty(event, 'timeStamp', { value: timeStamp })
+  return event
+}
+
+describe('TrajectoryEngine hover priority and tolerance zones', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('gives instant full confidence for stationary cursor over element', () => {
+    const target = new EventTarget()
+    const engine = new TrajectoryEngine({ eventTarget: target, smoothingFactor: 1 })
+    const el = document.createElement('div')
+
+    mockRectAt(el, { left: 100, top: 100, width: 100, height: 100 })
+    engine.register('box', el, makeConfig())
+    engine.connect()
+
+    target.dispatchEvent(makePointerEvent(120, 120, 1000))
+    vi.advanceTimersByTime(17)
+
+    const snap = engine.getSnapshot('box')
+    expect(snap).toBeDefined()
+    expect(snap!.isIntersecting).toBe(true)
+    expect(snap!.confidence).toBe(1)
+
+    engine.destroy()
+  })
+
+  it('gives instant full confidence for slow cursor over element', () => {
+    const target = new EventTarget()
+    const engine = new TrajectoryEngine({ eventTarget: target, smoothingFactor: 1 })
+    const el = document.createElement('div')
+
+    mockRectAt(el, { left: 100, top: 100, width: 100, height: 100 })
+    engine.register('box', el, makeConfig())
+    engine.connect()
+
+    target.dispatchEvent(makePointerEvent(120, 120, 1000))
+    vi.advanceTimersByTime(17)
+    target.dispatchEvent(makePointerEvent(140, 120, 2000))
+    vi.advanceTimersByTime(17)
+
+    const snap = engine.getSnapshot('box')
+    expect(snap).toBeDefined()
+    expect(snap!.velocity.magnitude).toBeLessThan(50)
+    expect(snap!.isIntersecting).toBe(true)
+    expect(snap!.confidence).toBe(1)
+
+    engine.destroy()
+  })
+
+  it('applies normal ramp when cursor is inside but moving fast', () => {
+    const target = new EventTarget()
+    const engine = new TrajectoryEngine({ eventTarget: target, smoothingFactor: 1 })
+    const el = document.createElement('div')
+
+    mockRectAt(el, { left: 100, top: 100, width: 100, height: 100 })
+    engine.register('box', el, makeConfig())
+    engine.connect()
+
+    target.dispatchEvent(makePointerEvent(80, 120, 1000))
+    vi.advanceTimersByTime(17)
+    target.dispatchEvent(makePointerEvent(120, 120, 1100))
+    vi.advanceTimersByTime(17)
+
+    const snap = engine.getSnapshot('box')
+    expect(snap).toBeDefined()
+    expect(snap!.velocity.magnitude).toBeGreaterThan(50)
+    expect(snap!.isIntersecting).toBe(true)
+    expect(snap!.confidence).toBeGreaterThan(0)
+    expect(snap!.confidence).toBeLessThan(1)
+
+    engine.destroy()
+  })
+
+  it('keeps normal trajectory ramping when cursor is outside raw element', () => {
+    const target = new EventTarget()
+    const engine = new TrajectoryEngine({ eventTarget: target, smoothingFactor: 1 })
+    const el = document.createElement('div')
+
+    mockRectAt(el, { left: 100, top: 100, width: 100, height: 100 })
+    engine.register('box', el, makeConfig())
+    engine.connect()
+
+    target.dispatchEvent(makePointerEvent(0, 120, 1000))
+    vi.advanceTimersByTime(17)
+    target.dispatchEvent(makePointerEvent(50, 120, 1100))
+    vi.advanceTimersByTime(17)
+
+    const snap = engine.getSnapshot('box')
+    expect(snap).toBeDefined()
+    expect(snap!.distancePx).toBeGreaterThan(0)
+    expect(snap!.isIntersecting).toBe(true)
+    expect(snap!.confidence).toBeGreaterThan(0)
+    expect(snap!.confidence).toBeLessThan(1)
+
+    engine.destroy()
+  })
+
+  it('measures distance to raw bounding box even with expanded tolerance', () => {
+    const target = new EventTarget()
+    const engine = new TrajectoryEngine({ eventTarget: target, smoothingFactor: 1 })
+    const el = document.createElement('div')
+
+    mockRectAt(el, { left: 100, top: 100, width: 100, height: 100 })
+    engine.register('box', el, makeConfig({ tolerance: 30 }))
+    engine.connect()
+
+    target.dispatchEvent(makePointerEvent(80, 120, 1000))
+    vi.advanceTimersByTime(17)
+
+    const snap = engine.getSnapshot('box')
+    expect(snap).toBeDefined()
+    expect(snap!.isIntersecting).toBe(true)
+    expect(snap!.distancePx).toBe(20)
+
+    engine.destroy()
+  })
+
+  it('keeps backwards-compatible behavior for numeric tolerance', () => {
+    const target = new EventTarget()
+    const engine = new TrajectoryEngine({ eventTarget: target, smoothingFactor: 1 })
+    const el = document.createElement('div')
+
+    mockRectAt(el, { left: 100, top: 100, width: 100, height: 100 })
+    engine.register('box', el, makeConfig({ tolerance: 30 }))
+    engine.connect()
+
+    target.dispatchEvent(makePointerEvent(80, 120, 1000))
+    vi.advanceTimersByTime(17)
+    target.dispatchEvent(makePointerEvent(80, 120, 1016.67))
+    vi.advanceTimersByTime(17)
+
+    const snap = engine.getSnapshot('box')
+    expect(snap).toBeDefined()
+    expect(snap!.isIntersecting).toBe(true)
+    expect(snap!.confidence).toBeGreaterThan(0)
+
+    engine.destroy()
+  })
+
+  it('caps confidence at outer zone factor when only outer zone matches', () => {
+    const target = new EventTarget()
+    const engine = new TrajectoryEngine({ eventTarget: target, smoothingFactor: 1 })
+    const el = document.createElement('div')
+
+    mockRectAt(el, { left: 100, top: 100, width: 100, height: 100 })
+    engine.register('box', el, makeConfig({
+      tolerance: [
+        { distance: 20, factor: 0.7 },
+        { distance: 50, factor: 0.3 },
+      ],
+    }))
+    engine.connect()
+
+    for (let i = 0; i < 12; i++) {
+      target.dispatchEvent(makePointerEvent(60, 120, 1000 + i * 16.67))
+      vi.advanceTimersByTime(17)
+    }
+
+    const snap = engine.getSnapshot('box')
+    expect(snap).toBeDefined()
+    expect(snap!.distancePx).toBe(40)
+    expect(snap!.confidence).toBe(0.3)
+
+    engine.destroy()
+  })
+
+  it('caps confidence at inner zone factor when inner zone matches', () => {
+    const target = new EventTarget()
+    const engine = new TrajectoryEngine({ eventTarget: target, smoothingFactor: 1 })
+    const el = document.createElement('div')
+
+    mockRectAt(el, { left: 100, top: 100, width: 100, height: 100 })
+    engine.register('box', el, makeConfig({
+      tolerance: [
+        { distance: 20, factor: 0.7 },
+        { distance: 50, factor: 0.3 },
+      ],
+    }))
+    engine.connect()
+
+    for (let i = 0; i < 12; i++) {
+      target.dispatchEvent(makePointerEvent(85, 120, 1000 + i * 16.67))
+      vi.advanceTimersByTime(17)
+    }
+
+    const snap = engine.getSnapshot('box')
+    expect(snap).toBeDefined()
+    expect(snap!.distancePx).toBe(15)
+    expect(snap!.confidence).toBe(0.7)
+
+    engine.destroy()
+  })
+
+  it('keeps confidence at 1.0 inside raw element regardless of zone factors', () => {
+    const target = new EventTarget()
+    const engine = new TrajectoryEngine({ eventTarget: target, smoothingFactor: 1 })
+    const el = document.createElement('div')
+
+    mockRectAt(el, { left: 100, top: 100, width: 100, height: 100 })
+    engine.register('box', el, makeConfig({
+      tolerance: [
+        { distance: 20, factor: 0.1 },
+        { distance: 50, factor: 0.2 },
+      ],
+    }))
+    engine.connect()
+
+    target.dispatchEvent(makePointerEvent(120, 120, 1000))
+    vi.advanceTimersByTime(17)
+
+    const snap = engine.getSnapshot('box')
+    expect(snap).toBeDefined()
+    expect(snap!.distancePx).toBe(0)
+    expect(snap!.confidence).toBe(1)
+
+    engine.destroy()
+  })
+})
 
 describe('resolveIdFromEventTarget', () => {
   it('resolves a registered element', () => {

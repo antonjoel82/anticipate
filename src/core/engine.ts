@@ -6,13 +6,13 @@ import type {
   TrajectorySnapshot,
   TriggerResult,
   Rect,
-  ToleranceRect,
+  NormalizedZone,
   ElementState,
   TriggerOptions,
   Point,
 } from './types.js'
 import { isConvenienceConfig } from './types.js'
-import { validateEngineOptions, validateElementConfig, normalizeTolerance } from './validators.js'
+import { validateEngineOptions, validateElementConfig, normalizeZones } from './validators.js'
 import { createPredictionState, updatePrediction } from './prediction.js'
 import type { PredictionState } from './prediction.js'
 import { segmentAABB } from './intersection.js'
@@ -26,6 +26,7 @@ import {
   CONFIDENCE_SATURATION_FRAMES,
   CONFIDENCE_DECAY_RATE,
   DEFAULT_CONFIDENCE_THRESHOLD,
+  HOVER_VELOCITY_THRESHOLD,
 } from './constants.js'
 import { DevEventEmitter } from '../devtools/events.js'
 import type { AnticipatedDevEventMap } from '../devtools/types.js'
@@ -35,7 +36,7 @@ type RegisteredElement = {
   config: ElementConfig
   state: ElementState
   cachedRect: Rect
-  normalizedTolerance: ToleranceRect
+  normalizedZones: NormalizedZone[]
 }
 
 export class TrajectoryEngine {
@@ -47,7 +48,7 @@ export class TrajectoryEngine {
   private readonly elementToId = new WeakMap<HTMLElement, string>()
 
   private predictionState: PredictionState
-  private readonly defaultTolerance: ToleranceRect
+  private readonly defaultZones: NormalizedZone[]
   private readonly confidenceSaturationFrames: number
   private readonly confidenceDecayRate: number
   private readonly confidenceThreshold: number
@@ -78,7 +79,7 @@ export class TrajectoryEngine {
       minVelocityThreshold: options?.minVelocityThreshold,
     })
 
-    this.defaultTolerance = normalizeTolerance(options?.defaultTolerance)
+    this.defaultZones = normalizeZones(options?.defaultTolerance)
     this.eventTarget = options?.eventTarget
       ?? (typeof document !== 'undefined' ? document : undefined)
 
@@ -99,9 +100,9 @@ export class TrajectoryEngine {
 
     validateElementConfig(resolvedConfig)
 
-    const tolerance: ToleranceRect = resolvedConfig.tolerance !== undefined
-      ? normalizeTolerance(resolvedConfig.tolerance)
-      : this.defaultTolerance
+    const zones: NormalizedZone[] = resolvedConfig.tolerance !== undefined
+      ? normalizeZones(resolvedConfig.tolerance)
+      : this.defaultZones
 
     const existing: RegisteredElement | undefined = this.elements.get(id)
     if (existing) {
@@ -116,7 +117,7 @@ export class TrajectoryEngine {
       this.elementToId.set(element, id)
       existing.element = element
       existing.config = resolvedConfig
-      existing.normalizedTolerance = tolerance
+      existing.normalizedZones = zones
       this.refreshRect(existing)
       return
     }
@@ -128,7 +129,7 @@ export class TrajectoryEngine {
       config: resolvedConfig,
       state: createElementState(),
       cachedRect: { left: 0, top: 0, right: 0, bottom: 0 },
-      normalizedTolerance: tolerance,
+      normalizedZones: zones,
     }
 
     this.elements.set(id, registered)
@@ -204,6 +205,10 @@ export class TrajectoryEngine {
 
   getAllSnapshots(): ReadonlyMap<string, TrajectorySnapshot> {
     return this.snapshots
+  }
+
+  getElementZones(id: string): ReadonlyArray<NormalizedZone> | undefined {
+    return this.elements.get(id)?.normalizedZones
   }
 
   subscribe(callback: () => void): () => void {
@@ -336,7 +341,6 @@ export class TrajectoryEngine {
     })
   }
 
-  // Reusable scratch Rect to avoid per-frame allocation in distanceToAABB
   private readonly scratchRect: Rect = { left: 0, top: 0, right: 0, bottom: 0 }
 
   private update(): void {
@@ -359,24 +363,48 @@ export class TrajectoryEngine {
     let hasChanges: boolean = false
 
     for (const [id, registered] of this.elements) {
-      const tol: ToleranceRect = registered.normalizedTolerance
-      const expandedMinX: number = registered.cachedRect.left - tol.left
-      const expandedMinY: number = registered.cachedRect.top - tol.top
-      const expandedMaxX: number = registered.cachedRect.right + tol.right
-      const expandedMaxY: number = registered.cachedRect.bottom + tol.bottom
+      const rawRect: Rect = registered.cachedRect
 
-      const isIntersecting: boolean = segmentAABB(
-        cursorX, cursorY, dx, dy,
-        expandedMinX, expandedMinY, expandedMaxX, expandedMaxY,
-      )
+      const cursorIsInside: boolean =
+        cursorX >= rawRect.left && cursorX <= rawRect.right &&
+        cursorY >= rawRect.top && cursorY <= rawRect.bottom
 
-      this.scratchRect.left = expandedMinX
-      this.scratchRect.top = expandedMinY
-      this.scratchRect.right = expandedMaxX
-      this.scratchRect.bottom = expandedMaxY
+      let bestFactor: number = 0
+      let anyZoneHit: boolean = false
+
+      for (const zone of registered.normalizedZones) {
+        const tol = zone.tolerance
+        const expandedMinX: number = rawRect.left - tol.left
+        const expandedMinY: number = rawRect.top - tol.top
+        const expandedMaxX: number = rawRect.right + tol.right
+        const expandedMaxY: number = rawRect.bottom + tol.bottom
+
+        const cursorInZone: boolean =
+          cursorX >= expandedMinX && cursorX <= expandedMaxX &&
+          cursorY >= expandedMinY && cursorY <= expandedMaxY
+
+        const trajectoryHitsZone: boolean = segmentAABB(
+          cursorX, cursorY, dx, dy,
+          expandedMinX, expandedMinY, expandedMaxX, expandedMaxY,
+        )
+
+        if (cursorInZone || trajectoryHitsZone) {
+          bestFactor = Math.max(bestFactor, zone.factor)
+          anyZoneHit = true
+        }
+      }
+
+      const isIntersecting: boolean = cursorIsInside || anyZoneHit
+
+      this.scratchRect.left = rawRect.left
+      this.scratchRect.top = rawRect.top
+      this.scratchRect.right = rawRect.right
+      this.scratchRect.bottom = rawRect.bottom
       const distancePx: number = distanceToAABB(cursorX, cursorY, this.scratchRect)
 
-      if (isIntersecting) {
+      if (cursorIsInside && velocity.magnitude < HOVER_VELOCITY_THRESHOLD) {
+        registered.state.consecutiveHitFrames = this.confidenceSaturationFrames
+      } else if (isIntersecting) {
         registered.state.consecutiveHitFrames = Math.min(
           this.confidenceSaturationFrames,
           registered.state.consecutiveHitFrames + 1,
@@ -388,10 +416,10 @@ export class TrajectoryEngine {
         )
       }
 
-      const confidence: number = Math.min(
-        1,
-        registered.state.consecutiveHitFrames / this.confidenceSaturationFrames,
-      )
+      const rawConfidence: number =
+        registered.state.consecutiveHitFrames / this.confidenceSaturationFrames
+      const effectiveFactor: number = cursorIsInside ? 1.0 : bestFactor
+      const confidence: number = Math.min(effectiveFactor, rawConfidence)
 
       const snapshot: TrajectorySnapshot = {
         isIntersecting,

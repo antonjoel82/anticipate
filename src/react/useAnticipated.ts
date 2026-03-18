@@ -3,6 +3,7 @@ import type { RefCallback } from 'react'
 import { TrajectoryEngine } from '../core/engine.js'
 import type {
   EngineOptions,
+  NormalizedZone,
   RegisterConfig,
   TrajectorySnapshot,
   TriggerOptions,
@@ -14,6 +15,7 @@ type UseAnticipatedReturn = {
   register: (id: string, config: RegisterConfig) => RefCallback<HTMLElement>
   trigger: (id: string, options?: TriggerOptions) => void
   getSnapshot: (id: string) => TrajectorySnapshot | undefined
+  getElementZones: (id: string) => ReadonlyArray<NormalizedZone> | undefined
   useSnapshot: (id: string) => TrajectorySnapshot | undefined
 }
 
@@ -75,6 +77,10 @@ export function useAnticipated(options?: EngineOptions): UseAnticipatedReturn {
     return engineRef.current?.getSnapshot(id)
   }, [])
 
+  const getElementZones = useCallback((id: string): ReadonlyArray<NormalizedZone> | undefined => {
+    return engineRef.current?.getElementZones(id)
+  }, [])
+
   const useSnapshot = (id: string): TrajectorySnapshot | undefined => {
     let cachedSubscribe: SubscribeFn | undefined = subscribeCache.current.get(id)
     if (!cachedSubscribe) {
@@ -89,7 +95,7 @@ export function useAnticipated(options?: EngineOptions): UseAnticipatedReturn {
     )
   }
 
-  return { register, trigger, getSnapshot, useSnapshot }
+  return { register, trigger, getSnapshot, getElementZones, useSnapshot }
 }
 
 function noopSubscribe(_callback: () => void): () => void {

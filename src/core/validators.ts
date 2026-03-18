@@ -1,10 +1,11 @@
-import type { EngineOptions, ElementConfig, Tolerance, ToleranceRect } from './types.js'
+import type { EngineOptions, ElementConfig, Tolerance, ToleranceRect, ToleranceZone, NormalizedZone } from './types.js'
 import {
   MIN_PREDICTION_WINDOW_MS,
   MAX_PREDICTION_WINDOW_MS,
   MIN_BUFFER_SIZE,
   MAX_BUFFER_SIZE,
   MAX_TOLERANCE,
+  MAX_TOLERANCE_ZONES,
 } from './constants.js'
 
 function validateRange(
@@ -18,7 +19,7 @@ function validateRange(
   }
 }
 
-function validateToleranceValue(value: Tolerance): void {
+function validateSimpleTolerance(value: number | ToleranceRect): void {
   if (typeof value === 'number') {
     if (value < 0 || value > MAX_TOLERANCE) {
       throw new Error(`tolerance must be between 0 and ${MAX_TOLERANCE}, got ${value}`)
@@ -32,6 +33,25 @@ function validateToleranceValue(value: Tolerance): void {
       throw new Error(`tolerance.${side} must be between 0 and ${MAX_TOLERANCE}, got ${value[side]}`)
     }
   }
+}
+
+function validateToleranceValue(value: Tolerance): void {
+  if (Array.isArray(value)) {
+    if (value.length === 0) {
+      throw new Error('tolerance zones array must not be empty')
+    }
+    if (value.length > MAX_TOLERANCE_ZONES) {
+      throw new Error(`tolerance zones array must have at most ${MAX_TOLERANCE_ZONES} entries, got ${value.length}`)
+    }
+    for (const zone of value) {
+      validateSimpleTolerance(zone.distance)
+      if (zone.factor < 0 || zone.factor > 1) {
+        throw new Error(`tolerance zone factor must be between 0 and 1, got ${zone.factor}`)
+      }
+    }
+    return
+  }
+  validateSimpleTolerance(value)
 }
 
 export function validateEngineOptions(options: EngineOptions | undefined): void {
@@ -86,7 +106,7 @@ export function validateElementConfig(config: ElementConfig): void {
   }
 }
 
-export function normalizeTolerance(tolerance: Tolerance | undefined): ToleranceRect {
+export function normalizeTolerance(tolerance: number | ToleranceRect | undefined): ToleranceRect {
   if (tolerance === undefined) {
     return { top: 0, right: 0, bottom: 0, left: 0 }
   }
@@ -96,4 +116,19 @@ export function normalizeTolerance(tolerance: Tolerance | undefined): ToleranceR
   }
 
   return { top: tolerance.top, right: tolerance.right, bottom: tolerance.bottom, left: tolerance.left }
+}
+
+export function normalizeZones(tolerance: Tolerance | undefined): NormalizedZone[] {
+  if (tolerance === undefined) {
+    return [{ tolerance: { top: 0, right: 0, bottom: 0, left: 0 }, factor: 1.0 }]
+  }
+
+  if (Array.isArray(tolerance)) {
+    return tolerance.map((zone: ToleranceZone) => ({
+      tolerance: normalizeTolerance(zone.distance),
+      factor: zone.factor,
+    }))
+  }
+
+  return [{ tolerance: normalizeTolerance(tolerance), factor: 1.0 }]
 }

@@ -17,7 +17,12 @@ export type ToleranceRect = {
   left: number
 }
 
-export type Tolerance = number | ToleranceRect
+export type ToleranceZone = {
+  distance: number | ToleranceRect
+  factor: number
+}
+
+export type Tolerance = number | ToleranceRect | ToleranceZone[]
 
 export type Rect = {
   left: number
@@ -78,6 +83,11 @@ export type EngineOptions = {
   minVelocityThreshold?: number
   decelerationWindowFloor?: number
   decelerationDampening?: number
+}
+
+export type NormalizedZone = {
+  tolerance: ToleranceRect
+  factor: number
 }
 
 export type ElementState = {

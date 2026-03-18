@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { validateEngineOptions, validateElementConfig, normalizeTolerance } from './validators.js'
+import { validateEngineOptions, validateElementConfig, normalizeTolerance, normalizeZones } from './validators.js'
 
 describe('validateEngineOptions', () => {
   it('accepts undefined (all defaults)', () => {
@@ -95,6 +95,27 @@ describe('validateElementConfig', () => {
       tolerance: { top: -1, right: 0, bottom: 0, left: 0 },
     })).toThrow(/tolerance/)
   })
+
+  it('rejects empty tolerance zones array', () => {
+    expect(() => validateElementConfig({
+      ...validConfig,
+      tolerance: [],
+    })).toThrow(/must not be empty/)
+  })
+
+  it('rejects tolerance zone factor below zero', () => {
+    expect(() => validateElementConfig({
+      ...validConfig,
+      tolerance: [{ distance: 20, factor: -0.1 }],
+    })).toThrow(/factor/)
+  })
+
+  it('rejects tolerance zone factor above one', () => {
+    expect(() => validateElementConfig({
+      ...validConfig,
+      tolerance: [{ distance: 20, factor: 1.1 }],
+    })).toThrow(/factor/)
+  })
 })
 
 describe('normalizeTolerance', () => {
@@ -113,5 +134,34 @@ describe('normalizeTolerance', () => {
 
   it('handles zero number', () => {
     expect(normalizeTolerance(0)).toEqual({ top: 0, right: 0, bottom: 0, left: 0 })
+  })
+})
+
+describe('normalizeZones', () => {
+  it('normalizes number tolerance as factor 1.0 zone', () => {
+    expect(normalizeZones(30)).toEqual([
+      {
+        tolerance: { top: 30, right: 30, bottom: 30, left: 30 },
+        factor: 1.0,
+      },
+    ])
+  })
+
+  it('normalizes zone array distances and factors', () => {
+    expect(normalizeZones([{ distance: 20, factor: 0.7 }])).toEqual([
+      {
+        tolerance: { top: 20, right: 20, bottom: 20, left: 20 },
+        factor: 0.7,
+      },
+    ])
+  })
+
+  it('defaults undefined to zero tolerance zone with factor 1.0', () => {
+    expect(normalizeZones(undefined)).toEqual([
+      {
+        tolerance: { top: 0, right: 0, bottom: 0, left: 0 },
+        factor: 1.0,
+      },
+    ])
   })
 })

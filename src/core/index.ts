@@ -4,13 +4,15 @@ export { distanceToAABB } from './distance.js'
 export { CircularBuffer } from './buffer.js'
 export { createPredictionState, updatePrediction } from './prediction.js'
 export { createElementState, shouldFire, updateElementState } from './triggers.js'
-export { validateEngineOptions, validateElementConfig, normalizeTolerance } from './validators.js'
+export { validateEngineOptions, validateElementConfig, normalizeTolerance, normalizeZones } from './validators.js'
 
 export type {
   Point,
   Velocity,
   Tolerance,
   ToleranceRect,
+  ToleranceZone,
+  NormalizedZone,
   Rect,
   TrajectorySnapshot,
   TriggerReason,
@@ -48,4 +50,6 @@ export {
   MIN_VELOCITY_THRESHOLD,
   DEFAULT_COOLDOWN_INTERVAL_MS,
   DEFAULT_CONFIDENCE_THRESHOLD,
+  HOVER_VELOCITY_THRESHOLD,
+  MAX_TOLERANCE_ZONES,
 } from './constants.js'

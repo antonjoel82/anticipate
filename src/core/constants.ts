@@ -21,3 +21,10 @@ export const MIN_VELOCITY_THRESHOLD = 5
 export const DEFAULT_COOLDOWN_INTERVAL_MS = 300
 
 export const DEFAULT_CONFIDENCE_THRESHOLD = 0.5
+
+// Hover priority: below this velocity (px/s), cursor is considered "hovering"
+// and an element under the cursor gets instant confidence = 1.0.
+// Derived from hoverIntent's sensitivity: 6px / 100ms ≈ 60 px/s.
+export const HOVER_VELOCITY_THRESHOLD = 50
+
+export const MAX_TOLERANCE_ZONES = 5

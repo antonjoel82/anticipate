@@ -10,7 +10,7 @@ function rgba(alpha: number): string {
 
 export function DebugOverlay() {
   const settings = useDemoStore()
-  const { getSnapshot } = useSharedTrajectory()
+  const { getSnapshot, getElementZones } = useSharedTrajectory()
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const cursorRef = useRef({ x: 0, y: 0 })
 
@@ -55,7 +55,6 @@ export function DebugOverlay() {
 
       tracked.forEach((el) => {
         const id: string = el.getAttribute('data-anticipated-id')!
-        const tolerance: number = Number(el.getAttribute('data-anticipated-tolerance') ?? '0')
         const rect: DOMRect = el.getBoundingClientRect()
 
         if (!hasPrediction) {
@@ -67,18 +66,35 @@ export function DebugOverlay() {
           }
         }
 
-        if (isShowingRadii && tolerance > 0) {
-          const ex: number = rect.left - tolerance
-          const ey: number = rect.top - tolerance
-          const ew: number = rect.width + tolerance * 2
-          const eh: number = rect.height + tolerance * 2
+        if (isShowingRadii) {
+          const zones = getElementZones(id)
 
-          ctx.strokeStyle = rgba(0.3)
-          ctx.lineWidth = 1
-          ctx.setLineDash([5, 4])
-          ctx.beginPath()
-          ctx.roundRect(ex, ey, ew, eh, 6)
-          ctx.stroke()
+          if (zones && zones.length > 0) {
+            const sortedZones = [...zones].sort((a, b) => {
+              const aMax = Math.max(a.tolerance.top, a.tolerance.right, a.tolerance.bottom, a.tolerance.left)
+              const bMax = Math.max(b.tolerance.top, b.tolerance.right, b.tolerance.bottom, b.tolerance.left)
+              return bMax - aMax
+            })
+
+            for (const zone of sortedZones) {
+              const t = zone.tolerance
+              const hasExpansion = t.top > 0 || t.right > 0 || t.bottom > 0 || t.left > 0
+              if (!hasExpansion) continue
+
+              const zx: number = rect.left - t.left
+              const zy: number = rect.top - t.top
+              const zw: number = rect.width + t.left + t.right
+              const zh: number = rect.height + t.top + t.bottom
+
+              const alpha: number = 0.12 + zone.factor * 0.35
+              ctx.strokeStyle = rgba(alpha)
+              ctx.lineWidth = 1
+              ctx.setLineDash([5, 4])
+              ctx.beginPath()
+              ctx.roundRect(zx, zy, zw, zh, 6)
+              ctx.stroke()
+            }
+          }
 
           ctx.strokeStyle = rgba(0.1)
           ctx.lineWidth = 1
