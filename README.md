@@ -155,6 +155,33 @@ const { register, useSnapshot, getSnapshot, trigger } = useAnticipated(options?)
 | `useSnapshot(id)` | `TrajectorySnapshot \| undefined` | Reactive snapshot via `useSyncExternalStore` |
 | `getSnapshot(id)` | `TrajectorySnapshot \| undefined` | Non-reactive read |
 | `trigger(id, opts?)` | `void` | Imperative trigger |
+| `engine` | `TrajectoryEngine \| null` | Underlying engine instance |
+
+### Shared Context (Multiple Components)
+
+When multiple components need trajectory data, use `TrajectoryProvider` to share a single engine:
+
+```tsx
+import { TrajectoryProvider, useSharedAnticipated } from 'anticipated/react'
+
+function App() {
+  return (
+    <TrajectoryProvider options={{ predictionWindow: 150 }}>
+      <Nav />
+      <Content />
+    </TrajectoryProvider>
+  )
+}
+
+function Nav() {
+  const { register, useSnapshot } = useSharedAnticipated()
+  const ref = register('settings', { whenApproaching: () => prefetch(), tolerance: 20 })
+  const snap = useSnapshot('settings')
+  return <a ref={ref}>Settings ({snap?.confidence.toFixed(2)})</a>
+}
+```
+
+> **Rule:** Call `useAnticipated()` once (low-level) or wrap with `<TrajectoryProvider>` (recommended). Don't call `useAnticipated()` in multiple components — each call creates a separate engine.
 
 ---
 
