@@ -1,21 +1,42 @@
-import { type CSSProperties, useRef } from 'react'
-import type { TrajectorySnapshot, TriggerProfile } from 'anticipated/core'
+import { type CSSProperties } from 'react'
+import type { TrajectorySnapshot } from 'anticipated/core'
 import { useNavigate } from 'react-router-dom'
 import { useFakeRequest } from '../lib/useFakeRequest.js'
 import { fakeFetch } from '../lib/fakeFetch.js'
-import { DASHBOARD_STATS, ORDERS, ONBOARDING_STEPS, type DashboardStat } from '../lib/fakeData.js'
-import { SkeletonCard } from '../components/LoadingOverlay.js'
+import {
+  DASHBOARD_STATS,
+  ORDERS,
+  ONBOARDING_STEPS,
+  RECENT_ACTIVITY,
+  NOTIFICATIONS,
+  TOP_CUSTOMERS,
+  getOrderDetail,
+  type DashboardStat,
+  type ActivityItem,
+  type Notification,
+  type TopCustomer,
+} from '../lib/fakeData.js'
+import { SkeletonCard, SkeletonLine } from '../components/LoadingOverlay.js'
 import { ConfidenceBadge } from '../components/ConfidenceBadge.js'
 import { useSharedTrajectory } from '../context/TrajectoryContext.js'
 import { getSettings, useDemoStore, incrementPreloadCount } from '../lib/demoStore.js'
 import { preload } from '../lib/cache.js'
 
-function getCardGlow(snapshot: TrajectorySnapshot | undefined, isShowing: boolean): CSSProperties {
+function getItemGlow(snapshot: TrajectorySnapshot | undefined, isShowing: boolean): CSSProperties {
   if (!isShowing || !snapshot || snapshot.confidence <= 0.5) return {}
   const intensity: number = (snapshot.confidence - 0.5) / 0.5
   return {
     borderColor: `rgba(74, 222, 128, ${0.3 + intensity * 0.7})`,
     boxShadow: `0 0 ${6 + intensity * 14}px rgba(74, 222, 128, ${intensity * 0.35})`,
+  }
+}
+
+function getRowGlow(snapshot: TrajectorySnapshot | undefined, isShowing: boolean): CSSProperties {
+  if (!isShowing || !snapshot || snapshot.confidence <= 0.5) return {}
+  const intensity: number = (snapshot.confidence - 0.5) / 0.5
+  return {
+    backgroundColor: `rgba(74, 222, 128, ${intensity * 0.04})`,
+    boxShadow: `inset 3px 0 0 rgba(74, 222, 128, ${0.3 + intensity * 0.7})`,
   }
 }
 
@@ -43,7 +64,7 @@ function StatCard({ stat }: { stat: DashboardStat }) {
   })
 
   const snapshot: TrajectorySnapshot | undefined = useSnapshot(`stat-${stat.id}`)
-  const glowStyle: CSSProperties = getCardGlow(snapshot, settings.isShowingPredictions)
+  const glowStyle: CSSProperties = getItemGlow(snapshot, settings.isShowingPredictions)
   const isGlowing: boolean = settings.isShowingPredictions && !!snapshot && snapshot.confidence > 0.5
 
   return (
@@ -65,333 +86,251 @@ function StatCard({ stat }: { stat: DashboardStat }) {
   )
 }
 
-const showcaseGridStyle: CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px', marginTop: '16px' }
-const showcaseCardStyle: CSSProperties = {
-  backgroundColor: '#13131a',
-  border: '1px solid #252530',
-  borderRadius: '8px',
-  padding: '24px',
-  display: 'flex',
-  flexDirection: 'column',
-  alignItems: 'center',
-  justifyContent: 'center',
-  minHeight: '160px',
-  position: 'relative',
-  overflow: 'hidden',
-  transition: 'all 0.1s ease-out'
+const SEVERITY_COLORS: Record<Notification['severity'], string> = {
+  success: 'var(--green-rgb)',
+  warning: 'var(--amber-rgb)',
+  error: 'var(--red-rgb)',
+  info: 'var(--blue-rgb)',
 }
 
-function MagneticGlowCard() {
+const SEVERITY_ICONS: Record<Notification['severity'], string> = {
+  success: '\u2713',
+  warning: '\u26A0',
+  error: '\u2717',
+  info: '\u2139',
+}
+
+function ActivityRow({ item }: { item: ActivityItem }) {
   const { register, useSnapshot } = useSharedTrajectory()
-  const id = 'showcase-magnetic'
-  const ref = register(id, {
-    triggerOn: (snap) => ({
-      isTriggered: snap.confidence > 0.1 || snap.distancePx < 300,
-      reason: 'trajectory' as const,
-    }),
-    whenTriggered: () => {},
-    profile: { type: 'every_frame' as const },
-    tolerance: 40,
-  })
-  const snap = useSnapshot(id)
-  const conf = snap?.confidence || 0
-  
-  const style: CSSProperties = {
-    ...showcaseCardStyle,
-    boxShadow: `0 0 ${conf * 40}px rgba(74, 222, 128, ${conf * 0.6})`,
-    borderColor: `rgba(74, 222, 128, ${0.2 + conf * 0.8})`,
-  }
+  const settings = useDemoStore()
+  const navigate = useNavigate()
+  const hasOrder = !!item.orderId
 
-  return (
-    <div ref={ref} style={style}>
-      <h3 style={{ margin: '0 0 8px 0', color: '#e8e8ec', zIndex: 2, position: 'relative' }}>Magnetic Glow</h3>
-      <div style={{ color: '#999', fontFamily: "'JetBrains Mono', monospace", zIndex: 2, position: 'relative' }}>
-        Confidence: {conf.toFixed(2)}
-      </div>
-    </div>
-  )
-}
-
-function DistanceFadeCard() {
-  const { register, useSnapshot } = useSharedTrajectory()
-  const id = 'showcase-distance'
-  const ref = register(id, {
-    triggerOn: (snap) => ({
-      isTriggered: snap.confidence > 0.1 || snap.distancePx < 300,
-      reason: 'trajectory' as const,
-    }),
-    whenTriggered: () => {},
-    profile: { type: 'every_frame' as const },
-    tolerance: 40,
-  })
-  const snap = useSnapshot(id)
-  const dist = snap?.distancePx ?? 300
-  const opacity = Math.max(0.15, 1 - Math.min(dist / 300, 0.85))
-
-  const style: CSSProperties = {
-    ...showcaseCardStyle,
-    opacity,
-    borderColor: `rgba(96, 165, 250, ${opacity})`,
-  }
-
-  return (
-    <div ref={ref} style={style}>
-      <h3 style={{ margin: '0 0 8px 0', color: '#e8e8ec', zIndex: 2, position: 'relative' }}>Distance Fade</h3>
-      <div style={{ color: '#999', fontFamily: "'JetBrains Mono', monospace", zIndex: 2, position: 'relative' }}>
-        Distance: {Math.round(dist)}px
-      </div>
-    </div>
-  )
-}
-
-function VelocityMeterCard() {
-  const { register, useSnapshot } = useSharedTrajectory()
-  const id = 'showcase-velocity'
-  const ref = register(id, {
-    triggerOn: (snap) => ({
-      isTriggered: snap.confidence > 0.1 || snap.distancePx < 300,
-      reason: 'trajectory' as const,
-    }),
-    whenTriggered: () => {},
-    profile: { type: 'every_frame' as const },
-    tolerance: 40,
-  })
-  const snap = useSnapshot(id)
-  const mag = snap?.velocity.magnitude || 0
-  const angle = snap?.velocity.angle || 0
-  const fillPct = Math.min(100, (mag / 500) * 100)
-
-  return (
-    <div ref={ref} style={showcaseCardStyle}>
-      <h3 style={{ margin: '0 0 8px 0', color: '#e8e8ec', zIndex: 2, position: 'relative' }}>Velocity Meter</h3>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', padding: '0 20px', zIndex: 2, position: 'relative' }}>
-        <div style={{ flex: 1, height: '6px', background: '#252530', borderRadius: '3px', overflow: 'hidden' }}>
-          <div style={{ width: `${fillPct}%`, height: '100%', background: 'rgb(251, 191, 36)', transition: 'width 0.1s' }} />
-        </div>
-        <div style={{ 
-          color: 'rgb(251, 191, 36)', 
-          transform: `rotate(${angle}rad)`,
-          transition: 'transform 0.1s',
-          fontSize: '20px',
-          lineHeight: 1
-        }}>▸</div>
-      </div>
-      <div style={{ color: '#999', fontFamily: "'JetBrains Mono', monospace", marginTop: '12px', zIndex: 2, position: 'relative' }}>
-        {Math.round(mag)} px/s
-      </div>
-    </div>
-  )
-}
-
-function PredictionDotCard() {
-  const { register, useSnapshot } = useSharedTrajectory()
-  const id = 'showcase-prediction'
-  const cardRef = useRef<HTMLDivElement | null>(null)
-  
-  const ref = register(id, {
-    triggerOn: (snap) => ({
-      isTriggered: snap.confidence > 0.1 || snap.distancePx < 300,
-      reason: 'trajectory' as const,
-    }),
-    whenTriggered: () => {},
-    profile: { type: 'every_frame' as const },
-    tolerance: 40,
-  })
-  const snap = useSnapshot(id)
-  
-  let dotX = 0
-  let dotY = 0
-  let showDot = false
-  
-  if (snap && cardRef.current) {
-    const rect = cardRef.current.getBoundingClientRect()
-    const predX = snap.predictedPoint.x - window.scrollX
-    const predY = snap.predictedPoint.y - window.scrollY
-    
-    const centerX = rect.left + rect.width / 2
-    const centerY = rect.top + rect.height / 2
-    
-    let dx = predX - centerX
-    let dy = predY - centerY
-    
-    const maxDx = rect.width / 2 - 6
-    const maxDy = rect.height / 2 - 6
-    
-    dx = Math.max(-maxDx, Math.min(maxDx, dx))
-    dy = Math.max(-maxDy, Math.min(maxDy, dy))
-    
-    dotX = dx
-    dotY = dy
-    showDot = true
-  }
-
-  return (
-    <div 
-      ref={(el) => {
-        ref(el)
-        cardRef.current = el
-      }} 
-      style={showcaseCardStyle}
-    >
-      <h3 style={{ margin: '0 0 8px 0', color: '#e8e8ec', position: 'relative', zIndex: 2 }}>Prediction Dot</h3>
-      <div style={{ color: '#999', fontFamily: "'JetBrains Mono', monospace", position: 'relative', zIndex: 2 }}>
-        {snap ? `${Math.round(snap.predictedPoint.x)}, ${Math.round(snap.predictedPoint.y)}` : '---, ---'}
-      </div>
-      
-      {showDot && (
-        <div style={{
-          position: 'absolute',
-          left: '50%',
-          top: '50%',
-          width: '12px',
-          height: '12px',
-          backgroundColor: 'rgb(74, 222, 128)',
-          borderRadius: '50%',
-          transform: `translate(calc(-50% + ${dotX}px), calc(-50% + ${dotY}px))`,
-          boxShadow: '0 0 10px rgb(74, 222, 128)',
-          transition: 'transform 0.1s linear',
-          zIndex: 1
-        }} />
-      )}
-    </div>
-  )
-}
-
-const profilesGridStyle: CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginTop: '16px' }
-const profileCardStyle: CSSProperties = {
-  backgroundColor: '#13131a',
-  border: '1px solid #252530',
-  borderRadius: '8px',
-  padding: '20px',
-  display: 'flex',
-  flexDirection: 'column',
-  position: 'relative',
-}
-const badgeStyle: CSSProperties = {
-  alignSelf: 'flex-start',
-  background: '#1e1e2a',
-  color: '#c8c8d0',
-  padding: '4px 8px',
-  borderRadius: '4px',
-  fontSize: '12px',
-  fontFamily: "'JetBrains Mono', monospace",
-  marginBottom: '12px'
-}
-const counterStyle: CSSProperties = {
-  fontSize: '48px',
-  fontWeight: 'bold',
-  color: '#e8e8ec',
-  margin: '12px 0',
-  fontFamily: "'JetBrains Mono', monospace"
-}
-const descStyle: CSSProperties = {
-  color: '#999',
-  fontSize: '13px',
-  lineHeight: 1.4
-}
-
-function ProfileCard({ 
-  title, 
-  type, 
-  profile, 
-  desc 
-}: { 
-  title: string, 
-  type: string, 
-  profile: TriggerProfile, 
-  desc: string 
-}) {
-  const { register } = useSharedTrajectory()
-  const counterRef = useRef(0)
-  const counterEl = useRef<HTMLDivElement>(null)
-  
-  const ref = register(`profile-${type}`, {
-    triggerOn: (snap) => ({
-      isTriggered: snap.isIntersecting && snap.confidence > 0.5,
-    }),
-    whenTriggered: () => {
-      counterRef.current++
-      if (counterEl.current) {
-        counterEl.current.textContent = String(counterRef.current) + (profile.type === 'once' ? ' ✓' : '')
+  const ref = register(`activity-${item.id}`, {
+    whenApproaching: () => {
+      if (!getSettings().isAnticipatedEnabled) return
+      if (item.orderId) {
+        if (preload(`order-detail-${item.orderId}`, () => fakeFetch(getOrderDetail(item.orderId!)))) {
+          incrementPreloadCount()
+        }
       }
     },
-    profile,
-    tolerance: 25,
+    tolerance: 10,
   })
 
+  const snapshot: TrajectorySnapshot | undefined = useSnapshot(`activity-${item.id}`)
+  const glowStyle: CSSProperties = hasOrder ? getRowGlow(snapshot, settings.isShowingPredictions) : {}
+  const isGlowing: boolean = hasOrder && settings.isShowingPredictions && !!snapshot && snapshot.confidence > 0.5
+
   return (
-    <div ref={ref} style={profileCardStyle}>
-      <div style={badgeStyle}>{type}</div>
-      <h3 style={{ margin: 0, color: '#e8e8ec', fontSize: '16px' }}>{title}</h3>
-      <div ref={counterEl} style={counterStyle}>0</div>
-      <div style={descStyle}>{desc}</div>
+    <div
+      ref={ref}
+      className={`activity-item ${hasOrder ? 'clickable' : ''} ${isGlowing ? 'glowing' : ''}`}
+      style={glowStyle}
+      onClick={hasOrder ? () => navigate('/orders') : undefined}
+      data-anticipated-id={`activity-${item.id}`}
+    >
+      <div className="activity-dot" />
+      <div className="activity-body">
+        <span className="activity-text">
+          <strong>{item.user}</strong> {item.action}{item.target ? ' ' : ''}
+          {item.target && <span className="activity-target">{item.target}</span>}
+        </span>
+        <span className="activity-time">{item.time}</span>
+      </div>
+      {hasOrder && <ConfidenceBadge snapshot={snapshot} isVisible={settings.isShowingPredictions} />}
+    </div>
+  )
+}
+
+function NotificationRow({ item }: { item: Notification }) {
+  const { register, useSnapshot } = useSharedTrajectory()
+  const settings = useDemoStore()
+  const navigate = useNavigate()
+  const hasLink = !!item.linkTo
+
+  const ref = register(`notif-${item.id}`, {
+    whenApproaching: () => {
+      if (!getSettings().isAnticipatedEnabled) return
+      if (item.orderId) {
+        if (preload(`order-detail-${item.orderId}`, () => fakeFetch(getOrderDetail(item.orderId!)))) {
+          incrementPreloadCount()
+        }
+      } else if (item.linkTo) {
+        const preloadFn: (() => boolean) | undefined = PRELOAD_MAP[item.linkTo]
+        if (preloadFn?.()) incrementPreloadCount()
+      }
+    },
+    tolerance: 10,
+  })
+
+  const snapshot: TrajectorySnapshot | undefined = useSnapshot(`notif-${item.id}`)
+  const rgb = SEVERITY_COLORS[item.severity]
+  const glowStyle: CSSProperties = hasLink ? getItemGlow(snapshot, settings.isShowingPredictions) : {}
+  const isGlowing: boolean = hasLink && settings.isShowingPredictions && !!snapshot && snapshot.confidence > 0.5
+
+  return (
+    <div
+      ref={ref}
+      className={`notification-item ${hasLink ? 'clickable' : ''} ${isGlowing ? 'glowing' : ''}`}
+      style={{ borderLeftColor: `rgb(${rgb})`, opacity: item.read ? 0.6 : 1, ...glowStyle }}
+      onClick={hasLink ? () => navigate(item.linkTo!) : undefined}
+      data-anticipated-id={`notif-${item.id}`}
+    >
+      <span className="notification-icon" style={{ color: `rgb(${rgb})` }}>
+        {SEVERITY_ICONS[item.severity]}
+      </span>
+      <div className="notification-body">
+        <span className="notification-title">{item.title}</span>
+        <span className="notification-message">{item.message}</span>
+      </div>
+      <span className="notification-time">{item.time}</span>
+      {hasLink && <ConfidenceBadge snapshot={snapshot} isVisible={settings.isShowingPredictions} />}
+    </div>
+  )
+}
+
+function TopCustomerRow({ customer }: { customer: TopCustomer }) {
+  const { register, useSnapshot } = useSharedTrajectory()
+  const settings = useDemoStore()
+  const navigate = useNavigate()
+
+  const ref = register(`customer-${customer.id}`, {
+    whenApproaching: () => {
+      if (!getSettings().isAnticipatedEnabled) return
+      if (preload('orders-list', () => fakeFetch(ORDERS))) {
+        incrementPreloadCount()
+      }
+    },
+    tolerance: 12,
+  })
+
+  const snapshot: TrajectorySnapshot | undefined = useSnapshot(`customer-${customer.id}`)
+  const glowStyle: CSSProperties = getRowGlow(snapshot, settings.isShowingPredictions)
+  const isGlowing: boolean = settings.isShowingPredictions && !!snapshot && snapshot.confidence > 0.5
+
+  return (
+    <tr
+      ref={ref as React.RefCallback<HTMLTableRowElement>}
+      className={`table-row ${isGlowing ? 'glowing' : ''}`}
+      style={glowStyle}
+      onClick={() => navigate('/orders')}
+      data-anticipated-id={`customer-${customer.id}`}
+    >
+      <td className="table-cell" style={{ fontWeight: 500, color: 'var(--text-primary)' }}>{customer.name}</td>
+      <td className="table-cell" style={{ textAlign: 'right', fontFamily: 'var(--font-mono)' }}>
+        ${customer.totalSpent.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+      </td>
+      <td className="table-cell" style={{ textAlign: 'right', fontFamily: 'var(--font-mono)' }}>{customer.orders}</td>
+      <td className="table-cell table-cell--badge" style={{ color: 'var(--text-muted)' }}>
+        {customer.lastOrder}
+        <ConfidenceBadge snapshot={snapshot} isVisible={settings.isShowingPredictions} />
+      </td>
+    </tr>
+  )
+}
+
+function ActivitySkeleton() {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+      {Array.from({ length: 5 }, (_, i) => (
+        <div key={i} style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+          <SkeletonLine width="8px" height="8px" />
+          <SkeletonLine width="70%" height="14px" />
+          <SkeletonLine width="15%" height="12px" />
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function NotificationsSkeleton() {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+      {Array.from({ length: 4 }, (_, i) => (
+        <div key={i} style={{ display: 'flex', gap: '12px', alignItems: 'flex-start', padding: '12px', background: 'var(--bg-dark)', borderRadius: '8px' }}>
+          <SkeletonLine width="20px" height="20px" />
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <SkeletonLine width="40%" height="14px" />
+            <SkeletonLine width="80%" height="12px" />
+          </div>
+        </div>
+      ))}
     </div>
   )
 }
 
 export function Dashboard() {
-  const { data: stats, isLoading } = useFakeRequest('dashboard-stats', () => fakeFetch(DASHBOARD_STATS))
+  const { data: stats, isLoading: statsLoading } = useFakeRequest('dashboard-stats', () => fakeFetch(DASHBOARD_STATS))
+  const { data: activity, isLoading: activityLoading } = useFakeRequest('recent-activity', () => fakeFetch(RECENT_ACTIVITY))
+  const { data: notifications, isLoading: notificationsLoading } = useFakeRequest('notifications', () => fakeFetch(NOTIFICATIONS))
+  const { data: topCustomers, isLoading: customersLoading } = useFakeRequest('top-customers', () => fakeFetch(TOP_CUSTOMERS))
 
   return (
     <div className="page">
       <header className="page-header">
         <h1>Dashboard</h1>
         <p className="page-subtitle">
-          Overview of your workspace. Hover toward any card or nav link to see predictive preloading in action.
+          Overview of your workspace. Hover toward any element to see predictive preloading in action.
         </p>
       </header>
 
       <section className="stat-grid">
-        {isLoading
+        {statsLoading
           ? Array.from({ length: 4 }, (_, i) => <SkeletonCard key={i} />)
           : stats?.map((stat) => <StatCard key={stat.id} stat={stat} />)
         }
       </section>
 
-      <section className="card">
-        <h2 className="card-title">Visual Effects Showcase</h2>
-        <p className="page-subtitle" style={{ marginTop: '4px', marginBottom: '0' }}>
-          Each element responds to cursor trajectory in real-time. Move your cursor toward them.
-        </p>
-        <div style={showcaseGridStyle}>
-          <MagneticGlowCard />
-          <DistanceFadeCard />
-          <VelocityMeterCard />
-          <PredictionDotCard />
-        </div>
-      </section>
+      <div className="dashboard-grid">
+        <section className="card">
+          <h2 className="card-title">Recent Activity</h2>
+          {activityLoading
+            ? <ActivitySkeleton />
+            : <div className="activity-feed">
+                {activity?.map((item) => <ActivityRow key={item.id} item={item} />)}
+              </div>
+          }
+        </section>
+
+        <section className="card">
+          <h2 className="card-title">Notifications</h2>
+          {notificationsLoading
+            ? <NotificationsSkeleton />
+            : <div className="notifications-list">
+                {notifications?.map((item) => <NotificationRow key={item.id} item={item} />)}
+              </div>
+          }
+        </section>
+      </div>
 
       <section className="card">
-        <h2 className="card-title">Trigger Profiles</h2>
-        <p className="page-subtitle" style={{ marginTop: '4px', marginBottom: '0' }}>
-          Four different firing strategies. Watch the counters — each behaves differently.
-        </p>
-        <div style={profilesGridStyle}>
-          <ProfileCard 
-            title="Prefetch" 
-            type="once" 
-            profile={{ type: 'once' as const }} 
-            desc="Counter fires exactly once. After firing, append ' ✓' to show it's done." 
-          />
-          <ProfileCard 
-            title="Hover Prep" 
-            type="on_enter" 
-            profile={{ type: 'on_enter' as const }} 
-            desc="Counter increments each time cursor trajectory enters the element." 
-          />
-          <ProfileCard 
-            title="Live Track" 
-            type="every_frame" 
-            profile={{ type: 'every_frame' as const }} 
-            desc="Counter increments RAPIDLY every frame while triggered. Will show high numbers quickly." 
-          />
-          <ProfileCard 
-            title="Rate Limited" 
-            type="cooldown" 
-            profile={{ type: 'cooldown' as const, intervalMs: 500 }} 
-            desc="Counter increments at most once per 500ms. Visibly slower than every_frame." 
-          />
-        </div>
+        <h2 className="card-title">Top Customers</h2>
+        {customersLoading
+          ? <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {Array.from({ length: 5 }, (_, i) => (
+                <div key={i} style={{ display: 'flex', gap: '16px' }}>
+                  <SkeletonLine width="25%" height="14px" />
+                  <SkeletonLine width="15%" height="14px" />
+                  <SkeletonLine width="10%" height="14px" />
+                  <SkeletonLine width="15%" height="14px" />
+                </div>
+              ))}
+            </div>
+          : <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Customer</th>
+                  <th style={{ textAlign: 'right' }}>Total Spent</th>
+                  <th style={{ textAlign: 'right' }}>Orders</th>
+                  <th>Last Order</th>
+                </tr>
+              </thead>
+              <tbody>
+                {topCustomers?.map((c) => <TopCustomerRow key={c.id} customer={c} />)}
+              </tbody>
+            </table>
+        }
       </section>
     </div>
   )
