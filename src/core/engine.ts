@@ -4,6 +4,7 @@ import type {
   RegisterConfig,
   ConvenienceConfig,
   TrajectorySnapshot,
+  FactorScores,
   TriggerResult,
   Rect,
   NormalizedZone,
@@ -20,7 +21,7 @@ import type { PredictionState } from './prediction.js'
 import { segmentAABB } from './intersection.js'
 import { distanceToAABB } from './distance.js'
 import { createElementState, shouldFire, updateElementState } from './triggers.js'
-import { computeConfidence } from './factors/compute.js'
+import { computeConfidenceWithFactors } from './factors/compute.js'
 import { trajectoryAlignmentFactor } from './factors/alignment.js'
 import { distanceFactor } from './factors/distance-factor.js'
 import { decelerationFactor } from './factors/deceleration.js'
@@ -476,6 +477,7 @@ export class TrajectoryEngine {
       const distancePx: number = distanceToAABB(cursorX, cursorY, this.scratchRect)
 
       let confidence: number
+      let pipelineFactors: FactorScores = { alignment: 1, distance: 1, deceleration: 1, erratic: 1 }
 
       if (cursorIsInside && velocity.magnitude < HOVER_VELOCITY_THRESHOLD) {
         confidence = 1.0
@@ -492,7 +494,14 @@ export class TrajectoryEngine {
           config: this.factorConfig,
         }
 
-        const pipelineConfidence = computeConfidence(this.factors, factorCtx)
+        const breakdown = computeConfidenceWithFactors(this.factors, factorCtx)
+        pipelineFactors = {
+          alignment: breakdown.scores[0],
+          distance: breakdown.scores[1],
+          deceleration: breakdown.scores[2],
+          erratic: breakdown.scores[3],
+        }
+        const pipelineConfidence = breakdown.confidence
         confidence = cursorIsInside ? pipelineConfidence : Math.min(bestFactor, pipelineConfidence)
       }
 
@@ -514,6 +523,7 @@ export class TrajectoryEngine {
         velocity: { x: velocity.x, y: velocity.y, magnitude: velocity.magnitude, angle: velocity.angle },
         confidence,
         predictedPoint: { x: predicted.x, y: predicted.y },
+        factors: pipelineFactors,
       }
       this.snapshots.set(id, snapshot)
 
@@ -606,6 +616,13 @@ export class TrajectoryEngine {
       active.cleanup()
     }
     this.activeTriggers.delete(elementId)
+
+    if (this.devEmitter.hasListeners()) {
+      this.devEmitter.emit('prediction:cancelled', {
+        elementId,
+        timestamp: performance.now(),
+      })
+    }
   }
 
   private cancelAllActiveTriggers(): void {

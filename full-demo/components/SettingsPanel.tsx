@@ -208,6 +208,17 @@ export function SettingsPanel() {
             </button>
           </div>
 
+          <div className="settings-row">
+            <span className="settings-label">Inspector</span>
+            <button
+              className={`toggle-switch ${settings.isShowingInspector ? 'on' : 'off'}`}
+              onClick={() => updateSettings({ isShowingInspector: !settings.isShowingInspector })}
+            >
+              <span className="toggle-thumb" />
+              <span className="toggle-text">{settings.isShowingInspector ? 'ON' : 'OFF'}</span>
+            </button>
+          </div>
+
           <div className="settings-divider" />
 
           <div className="settings-row">

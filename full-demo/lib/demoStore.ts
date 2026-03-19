@@ -20,6 +20,7 @@ export type DemoSettings = {
   isShowingPredictions: boolean
   isShowingRadii: boolean
   isShowingRays: boolean
+  isShowingInspector: boolean
   preloadCount: number
   predictionWindow: number
   smoothingFactor: number
@@ -57,6 +58,7 @@ function readSettingsFromURL(): Partial<DemoSettings> {
   if (params.has('predictions')) patch.isShowingPredictions = parseBool(params.get('predictions'), true)
   if (params.has('radii')) patch.isShowingRadii = parseBool(params.get('radii'), false)
   if (params.has('rays')) patch.isShowingRays = parseBool(params.get('rays'), false)
+  if (params.has('inspector')) patch.isShowingInspector = parseBool(params.get('inspector'), false)
   if (params.has('pw')) patch.predictionWindow = parseNum(params.get('pw'), 150, 50, 500)
   if (params.has('sf')) patch.smoothingFactor = parseNum(params.get('sf'), 0.3, 0.05, 1)
   if (params.has('ct')) patch.confidenceThreshold = parseNum(params.get('ct'), 0.5, 0.1, 1)
@@ -92,6 +94,7 @@ function writeSettingsToURL(): void {
   params.set('predictions', s.isShowingPredictions ? '1' : '0')
   params.set('radii', s.isShowingRadii ? '1' : '0')
   params.set('rays', s.isShowingRays ? '1' : '0')
+  params.set('inspector', s.isShowingInspector ? '1' : '0')
   params.set('pw', String(s.predictionWindow))
   params.set('sf', String(s.smoothingFactor))
   params.set('ct', String(s.confidenceThreshold))
@@ -131,6 +134,7 @@ let settings: DemoSettings = {
   isShowingPredictions: true,
   isShowingRadii: false,
   isShowingRays: true,
+  isShowingInspector: false,
   preloadCount: 0,
   predictionWindow: 150,
   smoothingFactor: 0.3,

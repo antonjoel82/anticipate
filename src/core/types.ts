@@ -31,12 +31,20 @@ export type Rect = {
   bottom: number
 }
 
+export type FactorScores = {
+  alignment: number
+  distance: number
+  deceleration: number
+  erratic: number
+}
+
 export type TrajectorySnapshot = {
   isIntersecting: boolean
   distancePx: number
   velocity: Velocity
   confidence: number
   predictedPoint: Point
+  factors: FactorScores
 }
 
 export type TriggerReason = 'trajectory' | 'distance' | 'velocity' | 'confidence' | 'custom'

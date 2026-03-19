@@ -9,6 +9,7 @@ export { presets } from './presets.js'
 
 export {
   computeConfidence,
+  computeConfidenceWithFactors,
   trajectoryAlignmentFactor,
   distanceFactor,
   decelerationFactor,
@@ -24,6 +25,7 @@ export type {
   NormalizedZone,
   Rect,
   TrajectorySnapshot,
+  FactorScores,
   TriggerReason,
   TriggerResult,
   TriggerProfile,
@@ -46,6 +48,7 @@ export type {
 } from './types.js'
 
 export type {
+  ConfidenceBreakdown,
   FactorContext,
   FactorConfig,
   WeightedFactor,

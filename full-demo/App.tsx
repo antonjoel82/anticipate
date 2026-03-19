@@ -5,6 +5,7 @@ import { Sidebar } from './components/Sidebar.js'
 import { SettingsPanel } from './components/SettingsPanel.js'
 import { DebugOverlay } from './components/DebugOverlay.js'
 import { MetricsBar } from './components/MetricsBar.js'
+import { InspectorPanel } from './components/InspectorPanel.js'
 import { Dashboard } from './pages/Dashboard.js'
 import { Orders } from './pages/Orders.js'
 import { Onboarding } from './pages/Onboarding.js'
@@ -32,6 +33,7 @@ export function App() {
         </div>
         <DebugOverlay />
         <SettingsPanel />
+        <InspectorPanel />
         <DevtoolsWrapper />
       </TrajectoryProvider>
     </BrowserRouter>

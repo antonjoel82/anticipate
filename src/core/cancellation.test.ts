@@ -126,4 +126,26 @@ describe('cancellation system', () => {
 
     expect(cleanup).toHaveBeenCalledOnce()
   })
+
+  it('emits prediction:cancelled dev event on cancel', () => {
+    const el = makeElement()
+    const cancelled = vi.fn()
+
+    engine.register('test', el, {
+      triggerOn: () => ({ isTriggered: true }),
+      whenTriggered: () => {},
+      profile: { type: 'once' },
+    })
+
+    engine.onDev('prediction:cancelled', cancelled)
+    engine.trigger('test', { dangerouslyIgnoreProfile: true })
+
+    expect(cancelled).not.toHaveBeenCalled()
+
+    engine.destroy()
+
+    expect(cancelled).toHaveBeenCalledWith(
+      expect.objectContaining({ elementId: 'test' })
+    )
+  })
 })
