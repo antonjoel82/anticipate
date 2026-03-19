@@ -246,11 +246,13 @@ type TrajectorySnapshot = {
 
 ### Confidence Scoring
 
-Confidence uses **temporal stability** — consecutive frames where the trajectory intersects the element, divided by `CONFIDENCE_SATURATION_FRAMES` (10). Reaches 1.0 after ~167ms of sustained trajectory alignment at 60fps.
+Confidence is computed per element per frame via a weighted factor pipeline:
+- **Trajectory alignment** — does the cursor ray intersect the element?
+- **Distance** — exponential decay by cursor-to-element distance
+- **Deceleration** — sigmoid detecting cursor slowdown near target
+- **Erratic penalty** — circular variance penalizing jittery movement
 
-```
-confidence = min(1, consecutiveHitFrames / 10)
-```
+Each factor produces a 0–1 score, aggregated multiplicatively. Temporal smoothing via accelerating decay prevents oscillation at element boundaries.
 
 ---
 
@@ -299,7 +301,6 @@ All constants are exported from `anticipated/core` for reference:
 | `DEFAULT_PREDICTION_WINDOW_MS` | `150` | Lookahead window |
 | `DEFAULT_SMOOTHING_FACTOR` | `0.3` | EWMA alpha |
 | `DEFAULT_BUFFER_SIZE` | `8` | Position ring buffer capacity |
-| `CONFIDENCE_SATURATION_FRAMES` | `10` | Frames to reach confidence=1 |
 | `MIN_VELOCITY_THRESHOLD` | `5` | Below this px/s, cursor is "stationary" |
 | `DECELERATION_WINDOW_FLOOR` | `0.3` | Minimum prediction window scale |
 | `DECELERATION_DAMPENING` | `0.5` | How much deceleration shrinks window |

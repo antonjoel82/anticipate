@@ -1150,3 +1150,65 @@ select.form-input {
   flex-direction: column;
   gap: 8px;
 }
+
+/* ===== Metrics Bar ===== */
+
+.metrics-bar {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(10, 10, 15, 0.85);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  grid-column: 1 / -1;
+}
+
+.metrics-bar-inner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  padding: 8px 24px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.metrics-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.metrics-item-label {
+  font-size: 0.68rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-faint);
+}
+
+.metrics-item-value {
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--text-body);
+}
+
+.metrics-highlight {
+  color: rgb(var(--green-rgb));
+  font-weight: 600;
+}
+
+.metrics-active {
+  color: rgb(var(--green-rgb));
+}
+
+.metrics-inactive {
+  color: var(--text-subtle);
+}
+
+.metrics-divider {
+  width: 1px;
+  height: 16px;
+  background: var(--border);
+  flex-shrink: 0;
+}

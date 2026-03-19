@@ -1,0 +1,6 @@
+export { computeConfidence } from './compute.js'
+export { trajectoryAlignmentFactor } from './alignment.js'
+export { distanceFactor } from './distance-factor.js'
+export { decelerationFactor } from './deceleration.js'
+export { erraticPenaltyFactor } from './erratic.js'
+export type { FactorContext, FactorConfig, WeightedFactor, ExpandedZoneRect } from './types.js'
